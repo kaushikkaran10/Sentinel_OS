@@ -1,3 +1,34 @@
 CLAUDE.md
 PROGRESS.md
 specs
+
+# --- Python / Sentinel_OS runtime (added in Phase 1) ---
+# All local runtime storage: model weights, uploads, generated deliverables,
+# ChromaDB persistence, LangGraph checkpointer DB. Must never be committed.
+data/
+app/data/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+*.pyc
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Editor / IDE
+.idea/
+.vscode/
+*.swp
+.DS_Store

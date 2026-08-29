@@ -1,0 +1,22 @@
+# Sentinel_OS — dependencies
+# Phase 1 (Foundation & Scaffold) only. Later phases append their own deps.
+# Setup-time internet is allowed (see 8_Decisions_2.md §9); runtime is air-gapped.
+
+# --- Web framework / server ---
+fastapi>=0.115,<1.0
+uvicorn[standard]>=0.30,<1.0
+
+# --- Config / validation ---
+pydantic>=2.7,<3.0
+pydantic-settings>=2.3,<3.0
+python-dotenv>=1.0,<2.0
+
+# --- Local-only HTTP client (Ollama probe on 127.0.0.1) ---
+httpx>=0.27,<1.0
+
+# --- Docker daemon health check (startup ping) ---
+docker>=7.1,<8.0
+
+# --- Host telemetry ---
+psutil>=5.9,<8.0
+nvidia-ml-py>=12.535        # provides the `pynvml` module; GPU stats are best-effort
