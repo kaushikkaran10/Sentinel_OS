@@ -57,3 +57,10 @@ langgraph>=1.2,<2.0                  # stateful cyclic graph (2_Tech_Stack.md §
 langgraph-checkpoint-sqlite>=3.1,<4.0  # SqliteSaver checkpointer (8_Decisions_2.md §2)
 aiosqlite>=0.20,<1.0                 # async sqlite driver — lets Phase 5 go async
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 5 (API Layer & Streaming). NO NEW DEPENDENCIES.
+#   - SSE streaming is plain Starlette `StreamingResponse` (no `sse-starlette`).
+#   - The in-memory task registry uses stdlib `asyncio` only.
+#   - `verify_phase5` drives a live SSE stream with the already-present `httpx`.
+# ─────────────────────────────────────────────────────────────────────────────
+

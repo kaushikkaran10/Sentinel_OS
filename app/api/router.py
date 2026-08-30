@@ -7,9 +7,10 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from api import kb, system
+from api import kb, system, workspace
 from core.config import settings
 
 api_router = APIRouter(prefix=settings.API_V1_PREFIX)
 api_router.include_router(system.router)
 api_router.include_router(kb.router)
+api_router.include_router(workspace.router)

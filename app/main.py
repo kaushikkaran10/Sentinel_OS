@@ -1,13 +1,18 @@
 """FastAPI application entrypoint.
 
-Launch (single worker only — task state is in-process from Phase 5 onward):
+Launch — **single worker is mandatory**, not advisory: from Phase 5 the agentic
+task registry (``services.workspace.registry``) holds ``asyncio.Task`` handles and
+streaming queues in process memory, invisible to any other worker (8_Decisions_2.md
+§1):
 
     cd app && python -m uvicorn main:app --workers 1
 
-Phase 1 wires up: config + logging, the data-dir layout, a non-fatal Docker
-health check (Degraded Mode per 8_Decisions_2.md §8), CORS for the React and
-Streamlit dev origins (§9), the standard error contract (§5), and the System
-Telemetry endpoints (5_Api_Spec.md §3).
+Wires up: config + logging, the data-dir layout, a non-fatal Docker health check
+(Degraded Mode per 8_Decisions_2.md §8), CORS for the React and Streamlit dev
+origins (§9), the standard error contract (§5), the System Telemetry endpoints
+(5_Api_Spec.md §3), the Local KB endpoints (§2) and the Agentic Workspace +
+SSE-streaming endpoints (§1). On shutdown, in-flight background tasks are
+cancelled and the SQLite checkpointer connection is closed.
 """
 
 from __future__ import annotations
@@ -26,6 +31,8 @@ from core.config import ensure_dirs, settings
 from core.docker_health import check_docker
 from core.logging import configure_logging, get_logger, log_critical
 from core.runtime import runtime
+from services.agent.orchestrator import close_checkpointer
+from services.workspace import shutdown_all
 
 logger = get_logger("sentinel.main")
 
@@ -57,6 +64,8 @@ async def lifespan(app: FastAPI):
     yield
 
     logger.info("Shutting down %s", settings.APP_NAME)
+    await shutdown_all()
+    await close_checkpointer()
 
 
 app = FastAPI(

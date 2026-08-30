@@ -100,6 +100,24 @@ async def get_checkpointer() -> AsyncSqliteSaver:
     return _checkpointer
 
 
+async def close_checkpointer() -> None:
+    """Close the process-wide checkpointer connection (app shutdown). Idempotent.
+
+    Also drops the cached compiled graph, which is bound to this connection — a
+    later ``get_agent()`` (e.g. a second ``TestClient`` context) rebuilds both.
+    """
+    global _checkpointer, _agent
+    if _checkpointer is not None:
+        async with _cp_lock:
+            if _checkpointer is not None:
+                try:
+                    await _checkpointer.conn.close()
+                except Exception:  # noqa: BLE001 - best-effort teardown
+                    logger.warning("checkpointer connection close failed", exc_info=True)
+                _checkpointer = None
+    _agent = None
+
+
 async def build_graph(checkpointer: Any | None = None):
     """Assemble and compile the workflow. ``checkpointer=None`` → the SQLite one."""
     graph = StateGraph(AgentState)
