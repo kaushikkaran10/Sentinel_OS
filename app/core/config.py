@@ -78,26 +78,37 @@ class Settings(BaseSettings):
         "http://localhost:8501",
     ]
 
-    # ── LLM provider (used from Phase 3) ────────────────────────────────────
+    # ── LLM provider (Phase 3, 8_Decisions_2.md §9) ────────────────────────
     LLM_PROVIDER: Literal["ollama", "groq"] = "ollama"
+    LLM_TIMEOUT_S: float = 120.0          # generous ceiling — cold starts run 5-15 s+
+
+    # Ollama (production, air-gapped). One model per role; keep_alive per §4.
     OLLAMA_BASE_URL: str = "http://localhost:11434"
+    OLLAMA_KEEP_ALIVE: str = "1m"         # 8_Decisions_2.md §4 — warm, then auto-evict
+    OLLAMA_MODEL_GENERAL: str = "llama3.1:8b"        # routing + drafting
+    OLLAMA_MODEL_CODER: str = "qwen2.5-coder:7b"     # code + math
+    OLLAMA_MODEL_VISION: str = "qwen2.5-vl:latest"   # image / scanned-PDF OCR
+
+    # Groq (LOCAL DEV ONLY — cloud calls; never the deployed/offline path).
+    GROQ_API_KEY: str | None = None
+    GROQ_BASE_URL: str = "https://api.groq.com/openai/v1"
+    GROQ_MODEL_GENERAL: str = "openai/gpt-oss-20b"
+    GROQ_MODEL_CODER: str = "qwen/qwen3.6-27b"
+    GROQ_MODEL_VISION: str = "qwen/qwen3.6-27b"
+    # The configured dev models are reasoning models. "hidden" makes Groq strip
+    # the chain-of-thought server-side so `generate()` returns a clean answer
+    # (downstream LangGraph nodes parse this string). "" / "raw" = leave it in.
+    GROQ_REASONING_FORMAT: str = "hidden"
 
     # ── Sandbox override (Phase 2) ─────────────────────────────────────────
     #   The embedding model is fixed (see EMBEDDING_MODEL_* constants above) —
     #   only the sandbox base image is env-overridable.
     SANDBOX_IMAGE: str = SANDBOX_IMAGE_DEFAULT
 
-    # ── Models reported by GET /system/models (2_Tech_Stack.md) ─────────────
-    ACTIVE_MODELS: Annotated[list[str], NoDecode] = [
-        "llama3.1:8b",
-        "qwen2.5-coder:7b",
-        "qwen2.5-vl:latest",
-    ]
-
     # ── Upload limit (8_Decisions_2.md §6). Enforced from Phase 2. ──────────
     MAX_UPLOAD_BYTES: int = 10 * 1024 * 1024  # 10 MB
 
-    @field_validator("CORS_ORIGINS", "ACTIVE_MODELS", mode="before")
+    @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def _split_csv(cls, v: object) -> object:
         """Accept a comma-separated string from the environment or a real list."""
@@ -142,6 +153,24 @@ class Settings(BaseSettings):
     @property
     def ALLOWED_MIME_TYPES(self) -> frozenset[str]:
         return ALLOWED_MIME_TYPES
+
+    @property
+    def ACTIVE_MODELS(self) -> list[str]:
+        """Models reported by ``GET /system/models`` (2_Tech_Stack.md §2).
+
+        Derived from the Ollama role fields — the deployment target is always
+        Ollama (Groq is dev-only), so this stays the production view regardless
+        of ``LLM_PROVIDER``. Single source of truth for role → model routing.
+        Order preserved; duplicates collapsed.
+        """
+        ordered = dict.fromkeys(
+            (
+                self.OLLAMA_MODEL_GENERAL,
+                self.OLLAMA_MODEL_CODER,
+                self.OLLAMA_MODEL_VISION,
+            )
+        )
+        return list(ordered)
 
 
 def ensure_dirs() -> None:

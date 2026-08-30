@@ -40,3 +40,11 @@ pdfplumber>=0.11,<0.13            # PDF text extraction; PyMuPDF deferred
 # --- Multipart form parsing for the upload endpoints (api/kb.py) ---
 python-multipart>=0.0.9,<0.1
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 3 (LLM Provider Layer). NO NEW DEPENDENCIES.
+# Both providers are reached over the existing `httpx` client:
+#   - OllamaClient -> POST {OLLAMA_BASE_URL}/api/generate (local, air-gapped)
+#   - GroqClient   -> POST {GROQ_BASE_URL}/chat/completions (cloud, DEV ONLY)
+# No vendor SDKs (`ollama`, `groq`, `openai`, ...) — hard constraint, CLAUDE.md.
+# ─────────────────────────────────────────────────────────────────────────────
+
