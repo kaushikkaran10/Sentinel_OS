@@ -1,0 +1,5 @@
+LOCKOUT / TAGOUT SOP
+1. Notify the area supervisor before isolating any equipment.
+2. Apply your personal lock and tag to the energy-isolation point.
+3. Verify zero energy state with a calibrated meter before work begins.
+4. Only the person who applied a lock may remove it.

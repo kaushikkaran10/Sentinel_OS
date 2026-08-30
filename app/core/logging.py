@@ -45,6 +45,12 @@ def configure_logging() -> None:
     for name in ("httpx", "httpcore", "urllib3", "docker", "watchfiles"):
         logging.getLogger(name).setLevel(logging.WARNING)
 
+    # RAG stack: quiet the routine noise. We deliberately tokenize whole
+    # documents before windowing them, which trips a benign length warning.
+    for name in ("sentence_transformers", "chromadb", "transformers"):
+        logging.getLogger(name).setLevel(logging.WARNING)
+    logging.getLogger("transformers.tokenization_utils_base").setLevel(logging.ERROR)
+
     _configured = True
 
 

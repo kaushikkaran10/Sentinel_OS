@@ -25,6 +25,25 @@ MODELS_DIR: Path = DATA_DIR / "models"
 CHROMA_DIR: Path = DATA_DIR / "chroma_db"
 LANGGRAPH_DB: Path = DATA_DIR / "langgraph.sqlite"           # created in Phase 4
 
+# ── RAG layer (6_Vector_Store_&_Data.md) ─────────────────────────────────────
+#   Decision: all-MiniLM-L6-v2, pre-downloaded to data/models/, loaded offline.
+EMBEDDING_MODEL_NAME: str = "all-MiniLM-L6-v2"
+EMBEDDING_MODEL_REPO: str = "sentence-transformers/all-MiniLM-L6-v2"
+EMBEDDING_MODEL_DIR: Path = MODELS_DIR / EMBEDDING_MODEL_NAME
+CHROMA_COLLECTION: str = "sentinel_sops"
+CHUNK_SIZE_TOKENS: int = 500          # 6_Vector_Store_&_Data.md §3
+CHUNK_OVERLAP_TOKENS: int = 50        # 6_Vector_Store_&_Data.md §3
+RAG_TOP_K: int = 4
+
+# ── Docker code sandbox (4_Agent_Logic_&_Tools.md §3, 8_Decisions_2.md §8) ────
+SANDBOX_IMAGE_DEFAULT: str = "python:3.12-alpine"
+SANDBOX_TIMEOUT_S: int = 30
+SANDBOX_MEM_LIMIT: str = "256m"
+SANDBOX_PIDS_LIMIT: int = 128
+SANDBOX_NANO_CPUS: int = 1_000_000_000  # 1.0 CPU
+# Exact string the sandbox tool returns in Degraded Mode (8_Decisions_2.md §8).
+DOCKER_UNAVAILABLE_MSG: str = "Error: Docker sandbox is unavailable on this host."
+
 # Upload allowlist (8_Decisions_2.md §6). Defined now, enforced from Phase 2.
 ALLOWED_MIME_TYPES: frozenset[str] = frozenset(
     {
@@ -62,6 +81,11 @@ class Settings(BaseSettings):
     # ── LLM provider (used from Phase 3) ────────────────────────────────────
     LLM_PROVIDER: Literal["ollama", "groq"] = "ollama"
     OLLAMA_BASE_URL: str = "http://localhost:11434"
+
+    # ── Sandbox override (Phase 2) ─────────────────────────────────────────
+    #   The embedding model is fixed (see EMBEDDING_MODEL_* constants above) —
+    #   only the sandbox base image is env-overridable.
+    SANDBOX_IMAGE: str = SANDBOX_IMAGE_DEFAULT
 
     # ── Models reported by GET /system/models (2_Tech_Stack.md) ─────────────
     ACTIVE_MODELS: Annotated[list[str], NoDecode] = [
@@ -110,6 +134,10 @@ class Settings(BaseSettings):
     @property
     def LANGGRAPH_DB(self) -> Path:
         return LANGGRAPH_DB
+
+    @property
+    def EMBEDDING_MODEL_DIR(self) -> Path:
+        return EMBEDDING_MODEL_DIR
 
     @property
     def ALLOWED_MIME_TYPES(self) -> frozenset[str]:

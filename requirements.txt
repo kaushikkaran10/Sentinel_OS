@@ -20,3 +20,23 @@ docker>=7.1,<8.0
 # --- Host telemetry ---
 psutil>=5.9,<8.0
 nvidia-ml-py>=12.535        # provides the `pynvml` module; GPU stats are best-effort
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 2 (Local Tools & File Generators). Setup-time internet only.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# --- File generation (services/tools/file_maker.py) ---
+python-docx>=1.1,<2.0
+openpyxl>=3.1,<4.0
+
+# --- Local RAG: embedded vector store + offline embeddings (services/rag/) ---
+chromadb>=0.5,<2.0                 # embedded PersistentClient ONLY — never server mode
+sentence-transformers>=3.0,<6.0   # pulls torch (CPU, ~200 MB), transformers, numpy
+huggingface-hub>=0.24,<1.0        # used directly by services/rag/fetch_model.py
+
+# --- Document ingestion for RAG (services/rag/ingest.py) ---
+pdfplumber>=0.11,<0.13            # PDF text extraction; PyMuPDF deferred
+
+# --- Multipart form parsing for the upload endpoints (api/kb.py) ---
+python-multipart>=0.0.9,<0.1
+
