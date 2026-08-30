@@ -85,9 +85,9 @@ class Settings(BaseSettings):
     # Ollama (production, air-gapped). One model per role; keep_alive per §4.
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_KEEP_ALIVE: str = "1m"         # 8_Decisions_2.md §4 — warm, then auto-evict
-    OLLAMA_MODEL_GENERAL: str = "llama3.1:8b"        # routing + drafting
+    OLLAMA_MODEL_GENERAL: str = "qwen3:8b"       # routing + drafting
     OLLAMA_MODEL_CODER: str = "qwen2.5-coder:7b"     # code + math
-    OLLAMA_MODEL_VISION: str = "qwen2.5-vl:latest"   # image / scanned-PDF OCR
+    OLLAMA_MODEL_VISION: str = "gemma4:e2b-it-qat"   # image / scanned-PDF OCR
 
     # Groq (LOCAL DEV ONLY — cloud calls; never the deployed/offline path).
     GROQ_API_KEY: str | None = None
