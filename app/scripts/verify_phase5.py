@@ -677,8 +677,9 @@ def _j_system_unchanged():
     import main
 
     with TestClient(main.app) as c:
+        # Spec tags: 2_Tech_Stack.md §2 / 5_Api_Spec.md §3 (commit de1d578).
         assert c.get("/api/v1/system/models").json() == {
-            "active_models": ["llama3.1:8b", "qwen2.5-coder:7b", "qwen2.5-vl:latest"]
+            "active_models": ["qwen3:8b", "qwen2.5-coder:7b", "gemma4:e2b-it-qat"]
         }
         t = c.get("/api/v1/system/telemetry")
         assert t.status_code == 200 and t.json()["air_gapped"] is True, t.json()

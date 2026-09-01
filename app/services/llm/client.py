@@ -22,9 +22,10 @@ helpers are thin wrappers that set it (Phase 3 item 4).
 from __future__ import annotations
 
 import abc
+import asyncio
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Awaitable, Callable, Literal, TypeVar
 
 from core.config import settings
 from core.logging import get_logger
@@ -50,6 +51,55 @@ class LLMBackendError(RuntimeError):
         self.provider = provider
         self.reason = reason
         super().__init__(f"{provider} LLM backend error: {reason}")
+
+
+# ── Transient-error retry (Groq free tier: 429 TPM, 5xx over-capacity) ────────
+_TRANSIENT_MARKERS: tuple[str, ...] = (
+    "429", "rate limit", "rate_limit", "over capacity",
+    "http 500", "http 502", "http 503", "timed out", "timeout",
+)
+_RETRY_DELAYS: tuple[float, ...] = (2.0, 5.0, 10.0)
+
+_T = TypeVar("_T")
+
+
+def is_transient_backend_error(exc: BaseException) -> bool:
+    """True for an :class:`LLMBackendError` worth retrying (rate-limit / 5xx / timeout)."""
+    return isinstance(exc, LLMBackendError) and any(
+        m in exc.reason.lower() for m in _TRANSIENT_MARKERS
+    )
+
+
+async def call_with_backoff(
+    make_coro: Callable[[], Awaitable[_T]],
+    *,
+    label: str = "llm",
+    delays: tuple[float, ...] = _RETRY_DELAYS,
+) -> _T:
+    """Await ``make_coro()``; retry transient backend errors with growing delays.
+
+    ``make_coro`` must return a *fresh* coroutine on each call (each provider
+    client opens its own ``httpx.AsyncClient`` per call, so a coroutine can't be
+    re-awaited). A non-transient :class:`LLMBackendError` propagates immediately.
+    After the final delay the last transient error is re-raised so the caller's
+    own fallback (e.g. the drafter safety-net) takes over.
+    """
+    attempts = 1 + len(delays)
+    last_exc: BaseException | None = None
+    for i in range(attempts):
+        try:
+            return await make_coro()
+        except LLMBackendError as exc:
+            last_exc = exc
+            if not is_transient_backend_error(exc) or i == attempts - 1:
+                raise
+            delay = delays[i]
+            logger.warning(
+                "%s: transient LLM error (%s) — retry %d/%d in %.0fs",
+                label, exc.reason[:100], i + 1, len(delays), delay,
+            )
+            await asyncio.sleep(delay)
+    raise last_exc  # pragma: no cover - loop always returns or raises above
 
 
 class LLMClient(abc.ABC):

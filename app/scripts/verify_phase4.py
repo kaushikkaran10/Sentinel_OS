@@ -541,8 +541,9 @@ def _g_system_models():
     with TestClient(main.app) as c:
         r = c.get("/api/v1/system/models")
         assert r.status_code == 200, r.status_code
+        # Spec tags: 2_Tech_Stack.md §2 / 5_Api_Spec.md §3 (commit de1d578).
         assert r.json() == {
-            "active_models": ["llama3.1:8b", "qwen2.5-coder:7b", "qwen2.5-vl:latest"]
+            "active_models": ["qwen3:8b", "qwen2.5-coder:7b", "gemma4:e2b-it-qat"]
         }, r.json()
 
 

@@ -25,11 +25,15 @@ from services.agent.context import user_prompt
 from services.agent.prompts import ROUTER_SYSTEM
 from services.agent.schemas import RouterDecision
 from services.agent.structured import StructuredOutputError, parse_as
-from services.llm.client import LLMBackendError, get_llm_client
+from services.llm.client import LLMBackendError, call_with_backoff, get_llm_client
 
 logger = get_logger("sentinel.agent.router")
 
 _IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg"}
+# Unambiguously non-visual inputs — the Vision node must never receive these,
+# whatever the LLM classifier says (it sometimes mislabels a text analysis task
+# as "vision", and vision_node then feeds the text file to an image endpoint).
+_TEXTUAL_SUFFIXES = {".txt", ".csv", ".json", ".md", ".log", ".tsv", ".docx", ".xlsx"}
 _SCANNED_HINT = re.compile(r"\b(scan|scanned|photo|photograph|image|ocr|screenshot)\b", re.I)
 
 # task_type (spec §1 vocabulary) -> graph node name
@@ -46,7 +50,9 @@ async def router(state: dict[str, Any]) -> dict[str, Any]:
         return _decided("vision", f"file {suffix or 'n/a'} needs visual extraction")
 
     try:
-        raw = await get_llm_client().draft(prompt, system=ROUTER_SYSTEM)
+        raw = await call_with_backoff(
+            lambda: get_llm_client().draft(prompt, system=ROUTER_SYSTEM), label="router"
+        )
         task_type = parse_as(RouterDecision, raw).task_type
     except StructuredOutputError as exc:
         logger.warning("Router could not parse a decision (%s) — defaulting to draft", exc)
@@ -54,6 +60,15 @@ async def router(state: dict[str, Any]) -> dict[str, Any]:
     except LLMBackendError as exc:
         logger.warning("Router LLM call failed (%s) — defaulting to draft", exc)
         task_type = "draft"
+
+    # Hard override: the Vision node only handles images / scanned PDFs. A text
+    # file (or no file at all) must never reach it, whatever the classifier said.
+    if task_type == "vision" and (not file_path or suffix in _TEXTUAL_SUFFIXES):
+        logger.warning(
+            "Router LLM returned 'vision' for a non-visual input (%s) — overriding to 'draft'",
+            suffix or "no file",
+        )
+        return _decided("draft", "llm said vision but input is not visual — overridden")
 
     return _decided(task_type, "llm classification")
 

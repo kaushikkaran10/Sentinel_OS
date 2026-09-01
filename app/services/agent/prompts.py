@@ -54,6 +54,7 @@ Rules:
 - When the user asks analytical, statistical, or factual questions (such as 'How many rows...', 'What are the columns...', 'What is the highest/lowest...', 'What is the average...', 'What is the range...', 'How many distinct batches...'), ALWAYS provide the direct, complete, and accurate factual answer in the 'answer' field with action: 'final'.
 - If the context already contains the dataset or file content, use it directly to answer the user's question accurately without calling unnecessary tools.
 - If the user explicitly asks to generate a spreadsheet (.xlsx) or approval note (.docx), call generate_metrics_sheet or generate_approval_note first, then output action: 'final'.
+- Call each deliverable tool AT MOST ONCE. If a generated file path (.docx / .xlsx) already appears in the context, the document is done — respond with action: 'final' and summarise it; do NOT call generate_approval_note or generate_metrics_sheet again.
 - If a tool returns an error, do not retry in a loop — explain the result and deliver your best answer with action: 'final'.
 
 Reply with ONLY one JSON object, no prose and no code fence, in one of these two shapes:

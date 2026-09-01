@@ -41,11 +41,16 @@ def _docker_ready() -> bool:
 def execute_sandbox_code(python_code: str) -> str:
     """Run ``python_code`` in a locked-down container and return its output.
 
-    Falls back to a local subprocess when Docker is unavailable (Degraded Mode).
+    Degraded Mode (8_Decisions_2.md §8 — authoritative per CLAUDE.md): if the
+    Phase 1 startup Docker check failed, return the exact hardcoded string and
+    do NOT touch the Docker SDK or execute the code anywhere. The agent's Draft
+    node then explains the failure to the user. (An earlier local-subprocess
+    fallback — ``_local_subprocess_fallback`` below — was removed as a spec
+    violation; re-enable it here only as a deliberate, documented deviation.)
     """
     if not _docker_ready():
-        logger.warning("Docker unavailable — falling back to local subprocess sandbox.")
-        return _local_subprocess_fallback(python_code)
+        logger.warning("Docker unavailable — sandbox tool returning the degraded-mode message.")
+        return DOCKER_UNAVAILABLE_MSG
 
     import docker
     from docker.errors import ImageNotFound

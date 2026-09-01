@@ -34,7 +34,7 @@ from services.agent.structured import (
     parse_as,
 )
 from services.agent.tools import TOOL_ERROR_PREFIX, is_deliverable_tool, run_tool
-from services.llm.client import LLMBackendError, get_llm_client
+from services.llm.client import LLMBackendError, call_with_backoff, get_llm_client
 from services.tools.file_maker import generate_approval_note
 
 logger = get_logger("sentinel.agent.nodes")
@@ -91,7 +91,9 @@ async def _decide(ask: str) -> tuple[AgentDecision | None, str]:
     last_raw = ""
     for system, label in ((DRAFTER_SYSTEM, "initial"), (DRAFTER_SYSTEM + DRAFTER_RETRY_SUFFIX, "retry")):
         try:
-            last_raw = await llm.draft(ask, system=system)
+            last_raw = await call_with_backoff(
+                lambda s=system: llm.draft(ask, system=s), label=f"drafter {label}"
+            )
             return parse_as(AgentDecision, last_raw), last_raw
         except (StructuredOutputError, LLMBackendError) as exc:
             if label == "initial":
@@ -116,6 +118,19 @@ async def drafter_node(state: dict[str, Any]) -> dict[str, Any]:
         }
 
     if decision.action == "tool" and iterations < MAX_TOOL_ITERATIONS:
+        # Stop-early guard: a downloadable deliverable already exists and the
+        # model wants to generate another one. Small models loop here instead of
+        # returning action:"final" after a successful tool result — finish now
+        # with the deliverable we have rather than regenerating it.
+        if state.get("final_deliverable_path") and is_deliverable_tool(decision.tool or ""):
+            answer = (decision.answer or "").strip() or (
+                "The requested document has been generated; finishing with it."
+            )
+            logger.info("drafter: deliverable already produced — not re-calling %s", decision.tool)
+            return {
+                "pending_tool_call": None,
+                "messages": [{"role": "assistant", "name": "drafter", "content": answer}],
+            }
         return {
             "pending_tool_call": {"tool": decision.tool, "args": decision.args},
             "messages": [
@@ -187,49 +202,26 @@ async def finalize_node(state: dict[str, Any]) -> dict[str, Any]:
 
 
 def _extract_metrics_for_summary(summary: str, state: dict[str, Any]) -> dict[str, Any]:
-    """Build a rich, structured metrics table for the Word approval note."""
-    text = (summary + " " + user_prompt(state) + " " + str(state.get("extracted_data") or {})).lower()
-    metrics: dict[str, Any] = {}
+    """Honest placeholder metrics for the finalize safety-net.
 
-    if "p-1042" in text or "pump" in text:
-        metrics["asset_id"] = "Centrifugal Pump P-1042"
-        metrics["location"] = "Plant Unit 3, Bay 2"
-        metrics["reporting_period"] = "2026-08-01 to 2026-08-31"
-        metrics["logged_abnormality_events"] = 8
-        metrics["high_severity_events"] = 4
-        metrics["medium_severity_events"] = 3
-        metrics["low_medium_events"] = 1
-        metrics["primary_degradation_type"] = "Advanced bearing wear & cavitation"
-        metrics["max_vibration_observed"] = "6.4 mm/s (baseline: 0.5-2.8)"
-        metrics["max_bearing_temp"] = "81°C (baseline: 40-65°C)"
-        metrics["kb_maintenance_log_match"] = "Verified in local store"
-        metrics["severity"] = "high"
-        metrics["status"] = "pending_human_review"
-    elif "oil" in text or "gasoline" in text or "crude" in text:
-        metrics["dataset_name"] = "Wood Gasoline-Yield Dataset (oil.csv)"
-        metrics["total_records"] = 32
-        metrics["columns_count"] = 5
-        metrics["mean_percentage_yield"] = "19.66%"
-        metrics["mean_gravity_api"] = "39.25"
-        metrics["highest_yield_recorded"] = "45.7%"
-        metrics["lowest_yield_recorded"] = "2.8%"
-        metrics["distinct_crude_batches"] = 10
-        metrics["severity"] = "nominal"
-        metrics["status"] = "validated"
-    elif "osha" in text or "psm" in text:
-        metrics["standard"] = "OSHA 3918-08 Petroleum Refinery PSM"
-        metrics["high_citation_areas"] = 5
-        metrics["primary_ragagep_codes"] = "API 520, API 521, API 570, ASME BPVC"
-        metrics["inspection_interval_class_1"] = "5 years max"
-        metrics["moc_compliance"] = "29 CFR 1910.119(l)"
-        metrics["status"] = "compliance_audit_ready"
-    else:
-        metrics["task_type"] = state.get("task_type") or "engineering_review"
-        metrics["policy"] = "air_gapped_sovereign_execution"
-        metrics["severity"] = "medium"
-        metrics["status"] = "pending_human_review"
-
-    return metrics
+    This runs ONLY when the agent did not produce its own deliverable — i.e. the
+    drafter loop failed or was cut short. It must NOT fabricate domain numbers:
+    an earlier version returned canned P-1042 / oil.csv / OSHA constants here
+    that read as though they had been computed from the uploaded file. Emit a
+    clearly-labelled placeholder instead so no reader mistakes it for real data.
+    """
+    source = Path(state["file_path"]).name if state.get("file_path") else "none provided"
+    return {
+        "note": (
+            "PLACEHOLDER — automated analysis did not complete. The metrics that "
+            "would normally appear here could NOT be computed from the provided "
+            "input and are not available. Do not treat any figure in this note "
+            "as a measured or calculated value."
+        ),
+        "task_type": state.get("task_type") or "unclassified",
+        "source_file": source,
+        "status": "incomplete — needs re-run or manual review of the source data",
+    }
 
 
 def _summary_text(state: dict[str, Any]) -> str:

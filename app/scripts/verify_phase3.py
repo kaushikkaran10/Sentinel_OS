@@ -79,7 +79,9 @@ def check(name: str, fn) -> None:
 # ── A. Config ─────────────────────────────────────────────────────────────
 def _a_groq_fields_from_env():
     assert settings.LLM_PROVIDER == "groq", settings.LLM_PROVIDER
-    assert settings.GROQ_MODEL_GENERAL == "openai/gpt-oss-20b", settings.GROQ_MODEL_GENERAL
+    # General moved onto qwen3.6-27b (same model as coder/vision) to avoid
+    # gpt-oss's spurious native-tool-call 400s and its heavier rate-limit tier.
+    assert settings.GROQ_MODEL_GENERAL == "qwen/qwen3.6-27b", settings.GROQ_MODEL_GENERAL
     assert settings.GROQ_MODEL_CODER == "qwen/qwen3.6-27b", settings.GROQ_MODEL_CODER
     assert settings.GROQ_MODEL_VISION == "qwen/qwen3.6-27b", settings.GROQ_MODEL_VISION
 
@@ -88,21 +90,22 @@ def _a_api_key_present():
     assert (settings.GROQ_API_KEY or "").strip(), "GROQ_API_KEY missing/blank in .env"
 
 
+# Spec-defined Ollama tags: 2_Tech_Stack.md §2 / 5_Api_Spec.md §3 (updated in
+# commit de1d578 — qwen3:8b general, gemma4:e2b-it-qat vision).
+_OLLAMA_MODELS = ["qwen3:8b", "qwen2.5-coder:7b", "gemma4:e2b-it-qat"]
+
+
 def _a_ollama_fields():
-    assert settings.OLLAMA_MODEL_GENERAL == "llama3.1:8b"
-    assert settings.OLLAMA_MODEL_CODER == "qwen2.5-coder:7b"
-    assert settings.OLLAMA_MODEL_VISION == "qwen2.5-vl:latest"
+    assert settings.OLLAMA_MODEL_GENERAL == _OLLAMA_MODELS[0]
+    assert settings.OLLAMA_MODEL_CODER == _OLLAMA_MODELS[1]
+    assert settings.OLLAMA_MODEL_VISION == _OLLAMA_MODELS[2]
     assert settings.OLLAMA_KEEP_ALIVE == "1m"
 
 
 def _a_active_models_computed():
     assert "ACTIVE_MODELS" not in type(settings).model_fields, "still a plain field"
     assert isinstance(type(settings).ACTIVE_MODELS, property), "not a property"
-    assert settings.ACTIVE_MODELS == [
-        "llama3.1:8b",
-        "qwen2.5-coder:7b",
-        "qwen2.5-vl:latest",
-    ], settings.ACTIVE_MODELS
+    assert settings.ACTIVE_MODELS == _OLLAMA_MODELS, settings.ACTIVE_MODELS
 
 
 # ── B. Interface contract (no network) ────────────────────────────────────
@@ -349,9 +352,7 @@ def _f_system_models():
     with TestClient(main.app) as c:
         r = c.get("/api/v1/system/models")
         assert r.status_code == 200, r.status_code
-        assert r.json() == {
-            "active_models": ["llama3.1:8b", "qwen2.5-coder:7b", "qwen2.5-vl:latest"]
-        }, r.json()
+        assert r.json() == {"active_models": _OLLAMA_MODELS}, r.json()
 
 
 # ── helpers ────────────────────────────────────────────────────────────
