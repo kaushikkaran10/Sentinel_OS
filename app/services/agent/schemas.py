@@ -87,3 +87,44 @@ class ApprovalNoteArgs(BaseModel):
 class MetricsSheetArgs(BaseModel):
     model_config = ConfigDict(extra="ignore")
     data: list[dict[str, Any]]
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_data(cls, values: Any) -> Any:
+        """Make the schema lenient — small LLMs send data in many shapes."""
+        import ast
+        import json
+
+        if isinstance(values, str):
+            try:
+                values = ast.literal_eval(values)
+            except Exception:
+                try:
+                    values = json.loads(values)
+                except Exception:
+                    pass
+
+        if isinstance(values, list):
+            # LLM passed a bare list instead of {"data": [...]}
+            return {"data": values}
+
+        if isinstance(values, dict):
+            d = values.get("data")
+            if isinstance(d, str):
+                try:
+                    d = ast.literal_eval(d)
+                except Exception:
+                    try:
+                        d = json.loads(d)
+                    except Exception:
+                        pass
+                values["data"] = d
+
+            if d is None:
+                # LLM passed a single row dict — wrap it
+                if any(not isinstance(v, dict) for v in values.values()):
+                    return {"data": [values]}
+            elif isinstance(d, dict):
+                # LLM passed {"data": {single_row}} — wrap it
+                return {"data": [d]}
+        return values

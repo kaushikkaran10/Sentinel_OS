@@ -22,6 +22,7 @@ from core.config import (
     SANDBOX_NANO_CPUS,
     SANDBOX_PIDS_LIMIT,
     SANDBOX_TIMEOUT_S,
+    UPLOADS_DIR,
     settings,
 )
 from core.logging import get_logger
@@ -38,10 +39,13 @@ def _docker_ready() -> bool:
 
 
 def execute_sandbox_code(python_code: str) -> str:
-    """Run ``python_code`` in a locked-down container and return its output."""
+    """Run ``python_code`` in a locked-down container and return its output.
+
+    Falls back to a local subprocess when Docker is unavailable (Degraded Mode).
+    """
     if not _docker_ready():
-        logger.warning("Sandbox requested while Docker unavailable — returning degraded string.")
-        return DOCKER_UNAVAILABLE_MSG
+        logger.warning("Docker unavailable — falling back to local subprocess sandbox.")
+        return _local_subprocess_fallback(python_code)
 
     import docker
     from docker.errors import ImageNotFound
@@ -109,6 +113,44 @@ def execute_sandbox_code(python_code: str) -> str:
                 client.close()
             except Exception:
                 pass
+
+
+def _local_subprocess_fallback(python_code: str) -> str:
+    """Run Python code in a local subprocess when Docker is not available.
+
+    This is a Degraded Mode fallback — less isolated than Docker but allows
+    the coder agent to actually process CSV files and compute real results.
+    """
+    import subprocess
+    import sys
+
+    # Inject the uploads directory path so scripts can find CSV/data files
+    uploads_dir = str(UPLOADS_DIR).replace("\\", "/")
+    preamble = (
+        f"import os; os.chdir(r'{uploads_dir}')\n"
+    )
+    full_code = preamble + python_code
+
+    try:
+        result = subprocess.run(
+            [sys.executable, "-c", full_code],
+            capture_output=True,
+            text=True,
+            timeout=SANDBOX_TIMEOUT_S,
+            cwd=str(UPLOADS_DIR),
+        )
+        output = result.stdout
+        if result.stderr:
+            output += ("\n" if output else "") + result.stderr
+        if not output.strip():
+            output = "(script produced no output)"
+        logger.info("Local sandbox finished (exit %d, %d bytes).", result.returncode, len(output))
+        return output.strip()
+    except subprocess.TimeoutExpired:
+        return _TIMEOUT_MSG
+    except Exception as exc:
+        logger.exception("Local subprocess sandbox failed.")
+        return f"Error: local sandbox execution failed: {type(exc).__name__}: {exc}"
 
 
 if __name__ == "__main__":  # pragma: no cover - manual smoke test

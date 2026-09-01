@@ -59,6 +59,19 @@ async def run_tool(name: str, args: dict[str, Any] | None) -> str:
     try:
         validated = arg_model.model_validate(args or {})
     except ValidationError as exc:
+        # Fallback: for generate_metrics_sheet, try to find any list of dicts in the args
+        if name == "generate_metrics_sheet" and args:
+            recovered = _recover_metrics_data(args)
+            if recovered:
+                try:
+                    validated = arg_model.model_validate({"data": recovered})
+                except ValidationError:
+                    pass
+                else:
+                    logger.info("Recovered %d rows for generate_metrics_sheet from malformed args", len(recovered))
+                    # fall through to run the tool
+                    result = await run_in_threadpool(fn, **validated.model_dump())
+                    return str(result)
         logger.warning("Invalid args for tool %s: %s", name, exc)
         return f"{TOOL_ERROR_PREFIX} invalid arguments for {name}: {exc.error_count()} error(s)"
 
@@ -69,3 +82,18 @@ async def run_tool(name: str, args: dict[str, Any] | None) -> str:
         return f"{TOOL_ERROR_PREFIX} {name} failed: {type(exc).__name__}: {exc}"
 
     return str(result)
+
+
+def _recover_metrics_data(args: dict) -> list[dict] | None:
+    """Recursively search args for any list of dicts to use as spreadsheet rows."""
+    # Direct list at any key
+    for val in args.values():
+        if isinstance(val, list) and val and isinstance(val[0], dict):
+            return val
+    # Nested dict containing a list
+    for val in args.values():
+        if isinstance(val, dict):
+            found = _recover_metrics_data(val)
+            if found:
+                return found
+    return None

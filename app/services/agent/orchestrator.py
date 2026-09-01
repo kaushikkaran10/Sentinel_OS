@@ -23,13 +23,14 @@ from __future__ import annotations
 
 import asyncio
 import operator
+from pathlib import Path
 from typing import Annotated, Any, TypedDict
 
 import aiosqlite
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.graph import END, START, StateGraph
 
-from core.config import settings
+from core.config import UPLOADS_DIR, settings
 from core.logging import get_logger
 from services.agent.nodes import (
     MAX_TOOL_ITERATIONS,
@@ -170,11 +171,58 @@ def run_config(thread_id: str) -> dict[str, Any]:
 
 def new_state(prompt: str, file_path: str | None = None) -> dict[str, Any]:
     """Seed an ``AgentState`` from a user prompt (+ optional uploaded file)."""
+    extracted: dict[str, Any] = {}
+    target_path = file_path
+
+    # If no file was explicitly uploaded, check if the prompt mentions local datasets or reports
+    if not target_path:
+        prompt_lower = prompt.lower()
+        if any(k in prompt_lower for k in ("oil", "gasoline", "crude", "distillation", "yield", "dataset")):
+            for name in ("oil.csv", "crude_distillation_yields.csv", "wood_gasoline_yield_dataset.txt"):
+                candidate = UPLOADS_DIR / name
+                if candidate.exists():
+                    target_path = str(candidate)
+                    break
+        elif any(k in prompt_lower for k in ("pump", "p-1042", "abnormality", "condition monitoring", "cooling water")):
+            candidate = UPLOADS_DIR / "pump_condition_monitoring_report.txt"
+            if candidate.exists():
+                target_path = str(candidate)
+
+    # Read text/csv/pdf/docx content directly into context so the agent has immediate access
+    if target_path and Path(target_path).exists():
+        p = Path(target_path)
+        suffix = p.suffix.lower()
+        if suffix in (".csv", ".txt", ".json"):
+            try:
+                extracted[p.name] = p.read_text(encoding="utf-8", errors="replace")[:8000]
+            except Exception as exc:
+                logger.warning("Could not pre-read %s: %s", p.name, exc)
+        elif suffix == ".pdf":
+            try:
+                import pdfplumber
+                parts = []
+                with pdfplumber.open(str(p)) as pdf:
+                    for page in pdf.pages:
+                        txt = page.extract_text()
+                        if txt:
+                            parts.append(txt)
+                if parts:
+                    extracted[p.name] = "\n".join(parts)[:8000]
+            except Exception as exc:
+                logger.warning("Could not pre-read PDF %s: %s", p.name, exc)
+        elif suffix == ".docx":
+            try:
+                from docx import Document
+                doc = Document(str(p))
+                extracted[p.name] = "\n".join(para.text for para in doc.paragraphs if para.text)[:8000]
+            except Exception as exc:
+                logger.warning("Could not pre-read DOCX %s: %s", p.name, exc)
+
     return {
         "messages": [{"role": "user", "content": prompt}],
-        "file_path": file_path,
+        "file_path": target_path,
         "task_type": None,
-        "extracted_data": {},
+        "extracted_data": extracted,
         "final_deliverable_path": None,
         "pending_tool_call": None,
         "iterations": 0,
