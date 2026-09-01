@@ -1,0 +1,57 @@
+# Wood Gasoline-Yield Oil Dataset (oil.csv / crude_distillation_yields.csv)
+
+## Overview & Key Statistics
+- Dataset Name: Wood Gasoline-Yield Oil Dataset (referenced as oil.csv or crude_distillation_yields.csv).
+- Total Records: 32 data rows (plus 1 header row).
+- Total Columns: 5 columns:
+  1. percentage yield
+  2. gravity (API gravity)
+  3. vapour pressure
+  4. ten percent distillation point
+  5. fraction end point
+
+## Key Analytical Facts & Answers:
+1. Row Count: Exactly 32 data rows (plus a header row, 33 total lines).
+2. Column Names: percentage yield, gravity, vapour pressure, ten percent distillation point, fraction end point.
+3. Highest Percentage Yield: 45.7% yield, corresponding to gravity 50.8, vapour pressure 8.6, ten percent distillation point 190, and fraction end point 407.
+4. Lowest Percentage Yield: 2.8% yield, corresponding to gravity 41.3, vapour pressure 1.8, ten percent distillation point 267, and fraction end point 235.
+5. Average (Mean) Percentage Yield: Approximately 19.66% (sum of yields = 629.1 / 32 = 19.659%).
+6. Average Gravity Value: Approximately 39.25 (sum of gravity = 1256.0 / 32 = 39.25).
+7. Range of Ten Percent Distillation Point: Minimum 190, Maximum 316 (Average ≈ 241.5).
+8. Range of Fraction End Point: Minimum 205, Maximum 444 (Average ≈ 332.09).
+9. Distinct Crude-Oil Batches: 10 distinct crude-oil batches are represented in the dataset (unique combinations of gravity, vapour pressure, and ten percent point). For example, gravity 50.8, vapour pressure 8.6, ten percent point 190 appears 4 times (with yields 12.2, 22.3, 34.7, 45.7 at different fraction end points 205, 275, 345, 407).
+
+## Complete Data Rows:
+percentage yield, gravity, vapour pressure, ten percent distillation point, fraction end point
+6.9, 38.4, 6.1, 220, 235
+14.4, 40.3, 4.8, 231, 307
+7.4, 40.0, 6.1, 217, 212
+8.5, 31.8, 0.2, 316, 365
+8.0, 40.8, 3.5, 210, 218
+2.8, 41.3, 1.8, 267, 235
+5.0, 38.1, 1.2, 274, 285
+12.2, 50.8, 8.6, 190, 205
+10.0, 32.2, 5.2, 236, 267
+15.2, 38.4, 6.1, 220, 300
+26.8, 40.3, 4.8, 231, 367
+14.0, 32.2, 2.4, 284, 351
+14.7, 31.8, 0.2, 316, 379
+6.4, 41.3, 1.8, 267, 275
+17.6, 38.1, 1.2, 274, 365
+22.3, 50.8, 8.6, 190, 275
+24.8, 32.2, 5.2, 236, 360
+26.0, 38.4, 6.1, 220, 365
+34.9, 40.3, 4.8, 231, 395
+18.2, 40.0, 6.1, 217, 272
+23.2, 32.2, 2.4, 284, 424
+18.0, 31.8, 0.2, 316, 428
+13.1, 40.8, 3.5, 210, 273
+16.1, 41.3, 1.8, 267, 358
+32.1, 38.1, 1.2, 274, 444
+34.7, 50.8, 8.6, 190, 345
+31.7, 32.2, 5.2, 236, 402
+33.6, 38.4, 6.1, 220, 410
+30.4, 40.0, 6.1, 217, 340
+26.6, 40.8, 3.5, 210, 347
+27.8, 41.3, 1.8, 267, 416
+45.7, 50.8, 8.6, 190, 407

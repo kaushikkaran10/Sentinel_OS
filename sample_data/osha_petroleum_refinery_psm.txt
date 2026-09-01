@@ -1,0 +1,92 @@
+# OSHA 3918-08 (2017): Process Safety Management for Petroleum Refineries
+Lessons Learned from the Petroleum Refinery Process Safety Management National Emphasis Program (NEP)
+U.S. Department of Labor — Occupational Safety and Health Administration
+
+## Contents
+1. Purpose & Background
+2. Process Safety Information (PSI) & RAGAGEP
+3. Process Hazards Analysis (PHA)
+4. Operating Procedures & Safe Work Practices
+5. Mechanical Integrity (MI)
+6. Management of Change (MOC)
+7. Related Safety Standards
+
+---
+
+## 1. Purpose & Background
+This document highlights areas of the Process Safety Management standard (PSM - 29 CFR 1910.119) where OSHA issued the most citations during the Petroleum Refinery Process Safety Management National Emphasis Program (NEP).
+Key high-citation areas include:
+- Process Safety Information (PSI)
+- Process Hazards Analysis (PHA)
+- Operating Procedures
+- Mechanical Integrity (MI)
+- Management of Change (MOC)
+
+Since the PSM standard was promulgated in 1992, the petroleum refining industry (SIC 2911, NAICS 32411) has had a high frequency of catastrophic incidents involving highly hazardous chemicals (HHC). In June 2007, OSHA initiated CPL 03-00-004 to audit refinery compliance and establish actionable remediation guidelines.
+
+---
+
+## 2. Process Safety Information (PSI) & RAGAGEP
+Employers must compile written Process Safety Information (PSI) covering HHC hazards, process technology, and equipment design.
+
+### Recognized and Generally Accepted Good Engineering Practices (RAGAGEP):
+All equipment in PSM-covered units must comply with selected RAGAGEP (consensus codes, non-consensus documents, and internal engineering standards per 29 CFR 1910.119(d)(3)(iii)).
+
+Key RAGAGEP Standards Cited:
+- API 520: Sizing, Selection, and Installation of Pressure-Relieving Devices in Refineries. Defines relief system calculations based on flow rate, set pressure, and back pressure. Fluttering or chattering indicates excessive back pressure.
+- API 521: Pressure-relieving and Depressuring Systems. Design basis for flare headers and depressurizing systems.
+- ASME Boiler and Pressure Vessel Code (BPVC), Section VIII, Division 1, UG-135(d) and Appendix M: Governs intervening stop valves between pressure vessels and relief devices to prevent accidental blockage of relief paths.
+- API RP-752 / API RP-753: Management of Hazards Associated with Location of Process Plant Permanent and Portable Buildings (Facility Siting). Mandates maximum credible event modeling and blast-resistant control room separation.
+- Process Industry Practices (PIP) PIC 001 & ISA ANSI/ISA-S5.1: Piping & Instrumentation Diagram (P&ID) documentation criteria and instrumentation symbology.
+
+---
+
+## 3. Process Hazards Analysis (PHA) — 29 CFR 1910.119(e)
+A PHA is an organized, systematic review to identify and control hazards associated with HHC handling.
+Must address:
+1. Previous incidents with catastrophic potential.
+2. Engineering and administrative controls.
+3. Consequences of engineering/administrative control failure.
+4. Facility siting (blast overpressure, toxic release distance).
+5. Human factors (alarm overload, bypass valve accessibility, emergency egress).
+
+### Recommendation Resolution (29 CFR 1910.119(e)(5)):
+Employers must establish a formal tracking system to promptly address, resolve, and document all PHA team recommendations. Citations frequently involved unresolved recommendations older than 5 years (e.g., rerating overpressured coils, updating P&IDs, evaluating increased crude unit throughput effects on relief systems).
+
+---
+
+## 4. Operating Procedures & Safe Work Practices — 29 CFR 1910.119(f)
+Written operating procedures must provide clear instructions for:
+- Initial startup, normal operations, temporary operations, emergency operations, and emergency shutdown (29 CFR 1910.119(f)(1)(i)(D)).
+- Safe Work Practices (29 CFR 1910.119(f)(4)):
+  - Motorized equipment access control in ignition-controlled areas.
+  - Line breaking and equipment opening.
+  - Hot work permits (29 CFR 1910.252).
+  - Lockout/Tagout (LOTO - 29 CFR 1910.147).
+  - Confined space entry (29 CFR 1910.146).
+
+---
+
+## 5. Mechanical Integrity (MI) — 29 CFR 1910.119(j)
+Covers pressure vessels, storage tanks, piping systems, pumps, relief devices, emergency shutdown systems, and instrumentation/sensors.
+
+### Leading MI Deficiencies & Inspection Standards:
+- API 510: Pressure Vessel Inspection Code (In-service inspection, repair, and alteration).
+- API 570: Piping Inspection Code (In-service inspection, rating, and repair).
+  - Class 1 Piping (flammable, H2S, anhydrous HCl, hydrofluoric acid): Thickness measurement inspection frequency must not exceed every 5 years.
+  - Classes 2 & 3 Piping: Thickness inspection frequency must not exceed every 10 years.
+  - Condition Monitoring Locations (CMLs): Must be established at injection points, mixing tees, and dead legs susceptible to localized corrosion.
+- API RP-571: Damage Mechanisms Affecting Fixed Equipment in the Refining Industry. Addresses Corrosion Under Insulation (CUI).
+- Resolving Anomalous Data: Inconsistent inspection readings (e.g., increasing pipe wall thickness) must be retested and formally evaluated, not discarded.
+
+---
+
+## 6. Management of Change (MOC) — 29 CFR 1910.119(l)
+Any modification (except replacement-in-kind) to process chemicals, technology, equipment, procedures, or facilities requires a written MOC before implementation.
+MOC requirements:
+1. Technical basis for the change.
+2. Impact on safety and health.
+3. Modifications to operating procedures.
+4. Authorization by designated management personnel.
+5. Training of affected operators and maintenance staff before startup.
+6. Defined time limits for temporary changes (e.g., temporary supports or temporary control rooms).
