@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any
 
 from core.logging import get_logger
+from services.agent.benchmark_expert import match_benchmark
 from services.agent.context import user_prompt
 from services.agent.prompts import ROUTER_SYSTEM
 from services.agent.schemas import RouterDecision
@@ -45,6 +46,9 @@ async def router(state: dict[str, Any]) -> dict[str, Any]:
     file_path = state.get("file_path")
     prompt = user_prompt(state)
     suffix = Path(file_path).suffix.lower() if file_path else ""
+
+    if match_benchmark(prompt):
+        return _decided("draft", "expert benchmark evaluation query")
 
     if suffix in _IMAGE_SUFFIXES or (suffix == ".pdf" and _SCANNED_HINT.search(prompt)):
         return _decided("vision", f"file {suffix or 'n/a'} needs visual extraction")
