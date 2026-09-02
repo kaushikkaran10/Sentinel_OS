@@ -1,16 +1,14 @@
-import React, { useState } from 'react'
-import NavigationRail from './NavigationRail'
+import React from 'react'
 import OSWindowHeader from './OSWindowHeader'
 import WorkspaceTab from './WorkspaceTab'
 import AgentPipelineTab from './AgentPipelineTab'
 import TelemetryTab from './TelemetryTab'
 import VaultTab from './VaultTab'
-import ThreeDTiltText from './ThreeDTiltText'
-import { ArrowLeft, ExternalLink, Terminal, Shield, RefreshCw } from 'lucide-react'
+import { ArrowLeft, ExternalLink, Terminal, Shield, RefreshCw, Cpu, Lock } from 'lucide-react'
 
 /**
- * WorkbenchStudio — Fullscreen Dedicated Sovereign OS Workbench
- * Provides a distraction-free, professional operating workspace for AI agents.
+ * WorkbenchStudio — Fullscreen Sovereign OS Workbench
+ * Provides a distraction-free, professional, high-performance workspace.
  */
 export default function WorkbenchStudio({
   activeTab = 'workspace',
@@ -24,81 +22,104 @@ export default function WorkbenchStudio({
   const activeModelTag = models?.active_models?.[0] || 'llama3.1:8b'
 
   return (
-    <div className="app-container workbench-fullscreen-container">
-      {/* Left Technical Navigation Rail */}
-      <NavigationRail
-        activeTab={activeTab}
-        onTabChange={onTabChange}
-        telemetry={telemetry}
-        onReturnToPortal={onReturnToPortal}
-        inStudioMode={true}
-      />
+    <div style={{ minHeight: 'calc(100vh - 60px)', padding: '24px 28px 48px', maxWidth: '1440px', margin: '0 auto', boxSizing: 'border-box' }}>
+      {/* Studio Top Context Strip */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '16px',
+          padding: '10px 16px',
+          background: 'var(--bg-surface-elevated)',
+          border: '1px solid var(--border-medium)',
+          borderRadius: 'var(--radius-md)',
+          boxShadow: 'var(--shadow-sm)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <button
+            onClick={onReturnToPortal}
+            className="btn btn-outline"
+            style={{ fontSize: '11.5px', padding: '5px 12px', gap: '6px' }}
+            title="Return to Sentinel OS Portal"
+          >
+            <ArrowLeft size={13} />
+            <span>Showcase Portal</span>
+          </button>
 
-      {/* Main Studio Center Stage */}
-      <main className="main-stage studio-stage">
-        {/* Top Studio Meta Bar */}
-        <div className="studio-top-bar">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <button
-              onClick={onReturnToPortal}
-              className="btn btn-outline"
-              style={{ fontSize: '11px', padding: '5px 12px', gap: '6px' }}
-              title="Return to Sentinel OS Showcase Portal"
-            >
-              <ArrowLeft size={13} />
-              <span>Showcase Portal</span>
-            </button>
-
-            <div className="hero-meta" style={{ margin: 0 }}>
-              <span className="dot" style={{ background: 'var(--accent-green)' }} />
-              <span>Sovereign Local Node: 127.0.0.1</span>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span className="airgap-badge">
-              <span className="pulse-dot" />
-              <span>AIR-GAP VERIFIED</span>
-            </span>
-
-            <a
-              href="http://localhost:8000/docs"
-              target="_blank"
-              rel="noreferrer"
-              className="btn btn-outline"
-              style={{ fontSize: '11px', padding: '5px 12px' }}
-            >
-              <span>API Specs</span>
-              <ExternalLink size={12} />
-            </a>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11.5px', fontFamily: 'var(--font-mono)' }}>
+            <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'var(--accent-green)', boxShadow: '0 0 8px var(--accent-green)' }} />
+            <span style={{ fontWeight: 600, color: 'var(--ink-primary)' }}>Sovereign Node 01: 127.0.0.1</span>
+            <span style={{ color: 'var(--ink-muted)' }}>• Local Port 8000</span>
           </div>
         </div>
 
-        {/* Primary Sovereign OS Window */}
-        <div className="os-window studio-os-window">
-          <OSWindowHeader
-            activeTab={activeTab}
-            onTabChange={onTabChange}
-            onRefresh={onRefresh}
-            isRefreshing={isRefreshing}
-          />
-
-          <div className="window-body">
-            {activeTab === 'workspace' && (
-              <WorkspaceTab onTaskFinished={onRefresh} />
-            )}
-            {activeTab === 'pipeline' && (
-              <AgentPipelineTab activeModel={activeModelTag} />
-            )}
-            {activeTab === 'telemetry' && (
-              <TelemetryTab telemetry={telemetry} models={models} onPurged={onRefresh} />
-            )}
-            {activeTab === 'vault' && (
-              <VaultTab />
-            )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '11px',
+              fontFamily: 'var(--font-mono)',
+              color: 'var(--accent-green)',
+              background: 'var(--accent-green-subtle)',
+              padding: '3px 10px',
+              borderRadius: 'var(--radius-pill)',
+              border: '1px solid rgba(16, 185, 129, 0.2)',
+            }}
+          >
+            <Lock size={12} />
+            <span>AIR-GAP LOCK: 0.0 KB/s EGRESS</span>
           </div>
+
+          <a
+            href="http://localhost:8000/docs"
+            target="_blank"
+            rel="noreferrer"
+            className="btn btn-outline"
+            style={{ fontSize: '11px', padding: '5px 12px', gap: '5px' }}
+          >
+            <span>OpenAPI Docs</span>
+            <ExternalLink size={11} />
+          </a>
         </div>
-      </main>
+      </div>
+
+      {/* Primary OS Container Window */}
+      <div
+        className="os-window studio-os-window"
+        style={{
+          background: 'var(--bg-surface)',
+          border: '1px solid var(--border-strong)',
+          borderRadius: 'var(--radius-lg)',
+          overflow: 'hidden',
+          boxShadow: 'var(--shadow-window)',
+        }}
+      >
+        <OSWindowHeader
+          activeTab={activeTab}
+          onTabChange={onTabChange}
+          onRefresh={onRefresh}
+          isRefreshing={isRefreshing}
+        />
+
+        <div className="window-body" style={{ padding: '24px' }}>
+          {activeTab === 'workspace' && (
+            <WorkspaceTab onTaskFinished={onRefresh} />
+          )}
+          {activeTab === 'pipeline' && (
+            <AgentPipelineTab activeModel={activeModelTag} />
+          )}
+          {activeTab === 'telemetry' && (
+            <TelemetryTab telemetry={telemetry} models={models} onPurged={onRefresh} />
+          )}
+          {activeTab === 'vault' && (
+            <VaultTab />
+          )}
+        </div>
+      </div>
     </div>
   )
 }

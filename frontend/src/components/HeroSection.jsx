@@ -1,150 +1,157 @@
 import React from 'react'
-import { Terminal, Shield, ArrowRight, Code2, Download, Sparkles, Cpu, ExternalLink } from 'lucide-react'
-import InteractiveCanvas from './InteractiveCanvas'
-import TypewriterHeading from './TypewriterHeading'
-import ScrambleText from './ScrambleText'
-import NeuralWaveform from './NeuralWaveform'
-import ThreeDTiltText from './ThreeDTiltText'
+import { Terminal, Shield, ArrowRight, Code2, Sparkles, Cpu, ExternalLink, Lock, CheckCircle2 } from 'lucide-react'
+import SystemArchitectureVisual from './SystemArchitectureVisual'
 
 export default function HeroSection({ onLaunchWorkbench, onScrollToSection, telemetry, activeModel }) {
   return (
-    <section className="hero-landing-section">
-      {/* Top Global Navigation Bar matching AgentForge Header */}
-      <header className="hero-navbar">
-        <div className="nav-brand">
-          <div className="brand-logo-icon">⌘</div>
-          <ScrambleText className="brand-title" as="span">
-            Sentinel OS
-          </ScrambleText>
-        </div>
-
-        <nav className="nav-links">
-          <a href="#workbench" onClick={(e) => { e.preventDefault(); onScrollToSection('workspace') }} className="nav-link">
-            <ScrambleText>Workbench</ScrambleText>
-          </a>
-          <a href="#showcase" onClick={(e) => { e.preventDefault(); document.getElementById('showcase')?.scrollIntoView({ behavior: 'smooth' }) }} className="nav-link">
-            <ScrambleText>Showcase</ScrambleText>
-          </a>
-          <a href="#how-it-works" onClick={(e) => { e.preventDefault(); document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' }) }} className="nav-link">
-            <ScrambleText>How It Works</ScrambleText>
-          </a>
-          <a href="#features" onClick={(e) => { e.preventDefault(); document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }) }} className="nav-link">
-            <ScrambleText>Capabilities</ScrambleText>
-          </a>
-          <a href="http://localhost:8000/docs" target="_blank" rel="noreferrer" className="nav-link" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-            <ScrambleText>API Specs</ScrambleText>
-            <ExternalLink size={11} />
-          </a>
-        </nav>
-
-        <div className="nav-actions">
-          <a
-            href="https://github.com/R4J-RYN/Sentinel_OS"
-            target="_blank"
-            rel="noreferrer"
-            className="btn btn-outline"
-            style={{ fontSize: '11px', padding: '6px 14px' }}
-          >
-            <Code2 size={14} />
-            <span>GitHub</span>
-          </a>
-          <button
-            onClick={onLaunchWorkbench}
-            className="btn btn-primary"
-            style={{ fontSize: '11px', padding: '6px 16px' }}
-          >
-            <Terminal size={14} />
-            <span>Launch OS</span>
-          </button>
-        </div>
-      </header>
-
+    <section className="hero-landing-section" style={{ padding: '40px 24px 60px', maxWidth: '1360px', margin: '0 auto' }}>
       {/* Main Hero Split View */}
-      <div className="hero-grid-content">
+      <div style={{ display: 'grid', gridTemplateColumns: '1.15fr 1fr', gap: '40px', alignItems: 'center' }}>
         {/* Left Column: Typography & CTAs */}
-        <div className="hero-copy-col">
-          <div className="hero-badge-capsule">
-            <span className="dot" style={{ background: 'var(--accent-coral)' }} />
-            <ScrambleText className="badge-text" as="span">
-              v0.1.0 — Multi-Agent Sovereign Pipelines
-            </ScrambleText>
-            <span className="badge-grid-accent">::::::</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Version Capsule */}
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '4px 12px',
+              borderRadius: 'var(--radius-pill)',
+              background: 'var(--accent-primary-subtle)',
+              border: '1px solid rgba(59, 130, 246, 0.25)',
+              width: 'fit-content',
+            }}
+          >
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--accent-primary)' }} />
+            <span style={{ fontSize: '11.5px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--accent-primary)' }}>
+              v0.1.0 • MULTI-AGENT SOVEREIGN PIPELINES
+            </span>
           </div>
 
-          <ThreeDTiltText as="h1" className="hero-main-title" maxTilt={8}>
-            The Sovereign Workbench<br />
-            <span className="hero-title-accent">for </span>
-            <TypewriterHeading />
-          </ThreeDTiltText>
+          {/* Heading */}
+          <h1
+            style={{
+              fontSize: '44px',
+              fontWeight: 800,
+              lineHeight: 1.15,
+              letterSpacing: '-0.03em',
+              color: 'var(--ink-primary)',
+            }}
+          >
+            The Sovereign Workbench for{' '}
+            <span
+              style={{
+                background: 'linear-gradient(135deg, var(--accent-primary), #60a5fa)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
+              Autonomous AI Agents
+            </span>
+          </h1>
 
-          <p className="hero-description">
-            Build, orchestrate, and deploy air-gapped AI agents from a unified local workspace.
-            Zero cloud telemetry, native document deliverables (.docx / .xlsx), and persistent SQLite state machines.
+          {/* Description */}
+          <p
+            style={{
+              fontSize: '15px',
+              color: 'var(--ink-secondary)',
+              lineHeight: 1.65,
+              maxWidth: '560px',
+            }}
+          >
+            Build, orchestrate, and audit mission-critical AI agents from an air-gapped operating system.
+            Zero cloud telemetry, native industrial deliverables (.docx / .xlsx), persistent SQLite state machines, and local ChromaDB RAG.
           </p>
 
-          <div className="hero-cta-group">
+          {/* Action Buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '6px' }}>
             <button
               onClick={onLaunchWorkbench}
-              className="btn btn-primary hero-btn-main"
+              className="btn btn-primary"
+              style={{
+                padding: '12px 24px',
+                fontSize: '14px',
+                fontWeight: 700,
+                borderRadius: 'var(--radius-sm)',
+                boxShadow: '0 0 24px rgba(59, 130, 246, 0.35)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '9px',
+              }}
             >
-              <Terminal size={16} />
+              <Terminal size={17} />
               <span>Launch Workbench</span>
-              <ArrowRight size={15} />
+              <ArrowRight size={16} />
             </button>
 
             <a
-              href="https://github.com/R4J-RYN/Sentinel_OS"
+              href="https://github.com/kaushikkaran10/Sentinel_OS"
               target="_blank"
               rel="noreferrer"
-              className="btn btn-outline hero-btn-sec"
+              className="btn btn-outline"
+              style={{
+                padding: '12px 20px',
+                fontSize: '13.5px',
+                borderRadius: 'var(--radius-sm)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
             >
               <Code2 size={16} />
               <span>GitHub</span>
             </a>
           </div>
 
-          {/* Micro Telemetry Pills under CTA */}
-          <div className="hero-meta-strip">
-            <div className="meta-pill">
-              <span className="pulse-dot" />
-              <span>Air-Gapped: <strong>100% Offline</strong></span>
+          {/* Verification Badges */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '12px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', fontFamily: 'var(--font-mono)', color: 'var(--accent-green)' }}>
+              <CheckCircle2 size={14} />
+              <span>100% On-Premise Air-Gap</span>
             </div>
-            <div className="meta-pill" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Cpu size={12} style={{ color: 'var(--accent-purple)' }} />
-              <span>Model Warm: <strong>{activeModel}</strong></span>
-              <NeuralWaveform color="var(--accent-purple)" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', fontFamily: 'var(--font-mono)', color: 'var(--ink-muted)' }}>
+              <span>•</span>
+              <Cpu size={14} style={{ color: 'var(--accent-purple)' }} />
+              <span>Model: {activeModel || 'llama3.1:8b'}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', fontFamily: 'var(--font-mono)', color: 'var(--ink-muted)' }}>
+              <span>•</span>
+              <Lock size={14} style={{ color: 'var(--accent-amber)' }} />
+              <span>Zero Cloud Egress</span>
             </div>
           </div>
         </div>
 
-        {/* Right Column: WebGL / Canvas Cybernetic Hologram Mascot */}
-        <div className="hero-visual-col">
-          <InteractiveCanvas />
+        {/* Right Column: Live Sovereign Topology Visual */}
+        <div>
+          <SystemArchitectureVisual />
         </div>
-      </div>
-
-      {/* Retro-Futuristic Dither Ribbon Pattern matching AgentForge screenshot */}
-      <div className="dither-ribbon-divider">
-        <div className="dither-pattern-strip" />
       </div>
 
       {/* Live Sovereign Telemetry Marquee Ticker */}
-      <div className="marquee-ticker">
-        <div className="ticker-track">
-          <span className="ticker-item">● LOCAL INFERENCE: OLLAMA [127.0.0.1:11434]</span>
-          <span className="ticker-item">● AIR-GAPPED: 0.0 KB/s CLOUD EGRESS</span>
-          <span className="ticker-item">● CHECKPOINTER: SQLITE [data/langgraph.sqlite]</span>
-          <span className="ticker-item">● VECTOR STORE: CHROMADB EMBEDDED</span>
-          <span className="ticker-item">● DELIVERABLE SYNTHESIS: .DOCX & .XLSX</span>
-          <span className="ticker-item">● MEMORY BUDGET: 1-MIN MODEL EVICTION</span>
-          {/* Duplicate for infinite loop */}
-          <span className="ticker-item">● LOCAL INFERENCE: OLLAMA [127.0.0.1:11434]</span>
-          <span className="ticker-item">● AIR-GAPPED: 0.0 KB/s CLOUD EGRESS</span>
-          <span className="ticker-item">● CHECKPOINTER: SQLITE [data/langgraph.sqlite]</span>
-          <span className="ticker-item">● VECTOR STORE: CHROMADB EMBEDDED</span>
-          <span className="ticker-item">● DELIVERABLE SYNTHESIS: .DOCX & .XLSX</span>
-          <span className="ticker-item">● MEMORY BUDGET: 1-MIN MODEL EVICTION</span>
+      <div
+        style={{
+          marginTop: '50px',
+          background: 'var(--bg-surface-sunken)',
+          border: '1px solid var(--border-medium)',
+          borderRadius: 'var(--radius-pill)',
+          padding: '10px 20px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          overflow: 'hidden',
+          fontSize: '11px',
+          fontFamily: 'var(--font-mono)',
+          color: 'var(--ink-secondary)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--accent-green)' }} />
+          <span>LOCAL NODE: 127.0.0.1</span>
         </div>
+        <div>STATE CHECKPOINTER: SQLITE (WAL MODE)</div>
+        <div>VECTOR STORE: CHROMADB EMBEDDED</div>
+        <div>EGRESS PACKETS: 0 BYTES</div>
       </div>
     </section>
   )

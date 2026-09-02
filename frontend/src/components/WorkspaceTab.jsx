@@ -24,7 +24,6 @@ import {
 } from 'lucide-react'
 import confetti from 'canvas-confetti'
 import { submitTask, streamTaskEvents, getDownloadUrl } from '../services/api'
-import SentinelBot from './SentinelBot'
 import MarkdownRenderer from './MarkdownRenderer'
 import DeliverablePreviewer from './DeliverablePreviewer'
 
@@ -213,10 +212,59 @@ export default function WorkspaceTab({ onTaskFinished }) {
 
   return (
     <div>
-      {/* Sovereign Companion Mascot */}
-      <SentinelBot status={taskStatus} />
+      {/* Modern Operational Status Bar */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          background: 'var(--bg-surface-sunken)',
+          border: '1px solid var(--border-medium)',
+          borderRadius: 'var(--radius-sm)',
+          padding: '8px 16px',
+          marginBottom: '20px',
+          fontSize: '11px',
+          fontFamily: 'var(--font-mono)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span
+            style={{
+              width: '7px',
+              height: '7px',
+              borderRadius: '50%',
+              background:
+                taskStatus === 'streaming'
+                  ? 'var(--accent-primary)'
+                  : taskStatus === 'completed'
+                  ? 'var(--accent-green)'
+                  : taskStatus === 'failed'
+                  ? 'var(--accent-coral)'
+                  : 'var(--accent-green)',
+              boxShadow: '0 0 8px currentColor',
+            }}
+          />
+          <span style={{ fontWeight: 700, color: 'var(--ink-primary)' }}>
+            {taskStatus === 'streaming'
+              ? 'PIPELINE EXECUTING (MULTI-AGENT GRAPH)'
+              : taskStatus === 'completed'
+              ? 'WORKFLOW COMPLETED (ALL GATES PASSED)'
+              : taskStatus === 'failed'
+              ? 'TASK INTERRUPTED'
+              : 'AGENT PIPELINE STANDBY'}
+          </span>
+        </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.05fr 1.25fr', gap: '24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', color: 'var(--ink-muted)' }}>
+          <span>CHECKPOINTER: SQLITE (WAL)</span>
+          <span>•</span>
+          <span>VECTOR DB: CHROMADB (MiniLM)</span>
+          <span>•</span>
+          <span style={{ color: 'var(--accent-green)', fontWeight: 600 }}>EGRESS: 0 BYTES</span>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.25fr', gap: '28px' }}>
         {/* LEFT COLUMN: Input & Evaluation Scenarios */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
