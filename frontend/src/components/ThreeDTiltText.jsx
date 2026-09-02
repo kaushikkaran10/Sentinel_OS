@@ -8,6 +8,7 @@ export default function ThreeDTiltText({
   children,
   className = '',
   as: Component = 'h2',
+  maxTilt,
   ...props
 }) {
   const [isHovered, setIsHovered] = useState(false)

@@ -1,8 +1,21 @@
-import React from 'react'
-import { Lock, RefreshCw, Terminal, Layers, Cpu, Archive } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Lock, RefreshCw, Terminal, Layers, Cpu, Archive, Sun, Moon } from 'lucide-react'
 import ScrambleText from './ScrambleText'
 
 export default function OSWindowHeader({ activeTab, onTabChange, onRefresh, isRefreshing }) {
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('sentinel-theme') || 'dark'
+  })
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('sentinel-theme', theme)
+  }, [theme])
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))
+  }
+
   const tabs = [
     { id: 'workspace', label: 'Task Workspace', code: '</>', icon: Terminal },
     { id: 'pipeline', label: 'Agent Pipeline', code: '⚡', icon: Layers },
@@ -27,7 +40,27 @@ export default function OSWindowHeader({ activeTab, onTabChange, onRefresh, isRe
           </ScrambleText>
         </div>
 
-        <div className="window-controls-end">
+        <div className="window-controls-end" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="theme-toggle-btn"
+            title={`Switch to ${theme === 'dark' ? 'Light Bauhaus' : 'Tactical Dark'} Mode`}
+            style={{ padding: '3px 8px', fontSize: '10.5px' }}
+          >
+            {theme === 'dark' ? (
+              <>
+                <Sun size={12} style={{ color: 'var(--accent-amber)' }} />
+                <span>Light</span>
+              </>
+            ) : (
+              <>
+                <Moon size={12} style={{ color: 'var(--accent-purple)' }} />
+                <span>Dark</span>
+              </>
+            )}
+          </button>
+
           <button
             onClick={onRefresh}
             title="Refresh Status"

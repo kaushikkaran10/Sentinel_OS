@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import {
   Upload,
   FileText,
@@ -13,10 +13,20 @@ import {
   CheckCircle2,
   AlertCircle,
   Sparkles,
+  Maximize2,
+  Minimize2,
+  Copy,
+  Check,
+  Zap,
+  Cpu,
+  Layers,
+  Activity,
 } from 'lucide-react'
 import confetti from 'canvas-confetti'
 import { submitTask, streamTaskEvents, getDownloadUrl } from '../services/api'
 import SentinelBot from './SentinelBot'
+import MarkdownRenderer from './MarkdownRenderer'
+import DeliverablePreviewer from './DeliverablePreviewer'
 
 export default function WorkspaceTab({ onTaskFinished }) {
   const [prompt, setPrompt] = useState('')
@@ -29,6 +39,8 @@ export default function WorkspaceTab({ onTaskFinished }) {
   const [deliverable, setDeliverable] = useState(null)
   const [taskStatus, setTaskStatus] = useState('idle') // idle | queued | streaming | completed | failed
   const [errorMessage, setErrorMessage] = useState('')
+  const [activeScenarioId, setActiveScenarioId] = useState(null)
+  const [isExpanded, setIsExpanded] = useState(false)
 
   const fileInputRef = useRef(null)
   const streamEndRef = useRef(null)
@@ -41,22 +53,43 @@ export default function WorkspaceTab({ onTaskFinished }) {
     'image/jpeg',
   ]
 
-  const presets = [
+  // Four authoritative industrial benchmark scenarios
+  const scenarios = [
     {
-      label: '⚙️ Pump P-1042 Audit',
+      id: 'p1042-audit',
+      badge: 'CBM SENSOR AUDIT',
+      badgeColor: 'var(--accent-coral)',
+      title: '⚙️ Pump P-1042 Anomaly Audit',
+      desc: 'Condition-Based Monitoring telemetry audit: 3 High-Severity events, vibration excursion, root causes & corrective actions.',
       text: 'Analyze the Pump Condition Monitoring Report for Centrifugal Pump P-1042. Summarize all High-Severity abnormality events, root causes, and corrective actions taken.',
+      fileHint: 'pump_condition_monitoring_report.txt',
     },
     {
-      label: '📄 Pump Maintenance Memo (.docx)',
+      id: 'p1042-memo',
+      badge: 'OFFICIAL MEMO (.DOCX)',
+      badgeColor: 'var(--accent-blue)',
+      title: '📄 Executive Approval Note',
+      desc: 'Generate official AEN-2026-0091 anomaly approval note with baseline excursion analysis, Structured Metrics table & sign-off station.',
       text: 'Draft an executive engineering Approval Note (.docx) for Centrifugal Pump P-1042 following the standard anomaly template. Include a detailed technical summary of the excursion against baseline, root causes, and formal recommendation (hold for human sign-off), along with a structured Metrics table (asset_id, location, baseline_vibration, observed_peak, high_severity_count, root_cause, severity, status=pending_human_review).',
+      fileHint: 'pump_condition_monitoring_report.txt',
     },
     {
-      label: '📊 Crude Distillation Yields (.xlsx)',
+      id: 'cdu3-yields',
+      badge: 'MASS BALANCE (.XLSX)',
+      badgeColor: 'var(--accent-green)',
+      title: '📊 Crude Distillation Yields',
+      desc: 'Process CDU-3 18-batch distillation data: cut yields, baseline tolerance, volume calculations & generate 2-tab reconciliation spreadsheet.',
       text: 'Analyze crude distillation cut yields from oil.csv. Calculate average yield across distillation cuts and generate an executive yield reconciliation spreadsheet (.xlsx).',
+      fileHint: 'oil.csv (CDU-3 18 Batches)',
     },
     {
-      label: '📋 OSHA PSM 5 Key Areas',
+      id: 'osha-psm',
+      badge: 'RAG COMPLIANCE',
+      badgeColor: 'var(--accent-purple)',
+      title: '📋 OSHA PSM 5 Key Areas',
+      desc: '29 CFR 1910.119 National Emphasis Program reference brief: top 5 cited deficiencies & key RAGAGEP consensus codes (API 510/570/653).',
       text: 'What are the five key areas OSHA cited most often during the Petroleum Refinery PSM National Emphasis Program? Summarize key RAGAGEP codes and requirements.',
+      fileHint: 'osha_petroleum_refinery_psm.txt',
     },
   ]
 
@@ -66,6 +99,11 @@ export default function WorkspaceTab({ onTaskFinished }) {
     navigator.clipboard.writeText(streamedText)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  const handleSelectScenario = (sc) => {
+    setActiveScenarioId(sc.id)
+    setPrompt(sc.text)
   }
 
   const handleFileChange = (file) => {
@@ -78,11 +116,16 @@ export default function WorkspaceTab({ onTaskFinished }) {
       return
     }
 
-    // Check extension / MIME
     const name = file.name.toLowerCase()
-    const validExt = name.endsWith('.pdf') || name.endsWith('.docx') || name.endsWith('.txt') || name.endsWith('.png') || name.endsWith('.jpg')
+    const validExt =
+      name.endsWith('.pdf') ||
+      name.endsWith('.docx') ||
+      name.endsWith('.txt') ||
+      name.endsWith('.png') ||
+      name.endsWith('.jpg') ||
+      name.endsWith('.csv')
     if (!validExt && !allowedTypes.includes(file.type)) {
-      setFileError('Unsupported file type. Use PDF, DOCX, TXT, PNG, or JPG.')
+      setFileError('Unsupported file type. Use PDF, DOCX, TXT, CSV, PNG, or JPG.')
       return
     }
 
@@ -97,7 +140,7 @@ export default function WorkspaceTab({ onTaskFinished }) {
   }
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
+    if (e) e.preventDefault()
     if (!prompt.trim()) return
 
     setIsSubmitting(true)
@@ -126,7 +169,7 @@ export default function WorkspaceTab({ onTaskFinished }) {
           if (frame.event === 'deliverable' && frame.data?.file_id) {
             setDeliverable(frame.data)
             try {
-              confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } })
+              confetti({ particleCount: 70, spread: 80, origin: { y: 0.6 } })
             } catch {}
           }
         },
@@ -149,368 +192,374 @@ export default function WorkspaceTab({ onTaskFinished }) {
     }
   }
 
+  // Filter out raw JSON tool-call fragments
+  const cleanAnswer = streamedText
+    .split('\n')
+    .filter((line) => {
+      const trimmed = line.trim()
+      if (trimmed.startsWith('{"action"')) return false
+      if (trimmed.startsWith('[tool call]')) return false
+      if (trimmed.startsWith('{"tool"')) return false
+      return true
+    })
+    .join('\n')
+    .trim()
+
+  // Compute active pipeline stage for visual tracker
+  const hasRouter = streamEvents.some((e) => e.data?.node === 'router')
+  const hasTool = streamEvents.some((e) => e.event === 'tool_call')
+  const hasDrafter = streamEvents.some((e) => e.event === 'token')
+  const hasDeliverable = Boolean(deliverable)
+
   return (
     <div>
       {/* Sovereign Companion Mascot */}
       <SentinelBot status={taskStatus} />
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.15fr', gap: '28px' }}>
-      {/* LEFT COLUMN: Input & Configuration */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-          {/* Prompt Section */}
-          <div className="form-group">
-            <label className="form-label">
-              <span>Task Prompt</span>
-              <span style={{ fontSize: '10px', color: 'var(--ink-muted)' }}>Ollama Qwen / Llama 3.1</span>
-            </label>
-            <textarea
-              className="textarea-field"
-              placeholder="Describe the confidential task, engineering analysis, or SOP approval needed..."
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              disabled={isSubmitting}
-            />
-            {/* Quick Prompt Presets */}
-            <div className="preset-chips">
-              {presets.map((p, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  className="chip-btn"
-                  onClick={() => setPrompt(p.text)}
-                  disabled={isSubmitting}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* File Upload Dropzone */}
-          <div className="form-group">
-            <label className="form-label">
-              <span>Upload Document (Optional)</span>
-              <span style={{ fontSize: '10px', color: 'var(--ink-muted)' }}>Max 10 MB • Air-Gapped</span>
-            </label>
-
-            {!selectedFile ? (
-              <div
-                className="dropzone"
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  style={{ display: 'none' }}
-                  onChange={(e) => handleFileChange(e.target.files[0])}
-                  accept=".pdf,.docx,.txt,.png,.jpg"
-                  disabled={isSubmitting}
-                />
-                <Upload size={22} style={{ color: 'var(--ink-muted)', margin: '0 auto 8px' }} />
-                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink-primary)' }}>
-                  Drag & Drop file or Click to Browse
-                </div>
-                <div style={{ fontSize: '11px', color: 'var(--ink-muted)', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
-                  Supports PDF, DOCX, TXT, PNG, JPG
-                </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.05fr 1.25fr', gap: '24px' }}>
+        {/* LEFT COLUMN: Input & Evaluation Scenarios */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Prompt Section */}
+            <div className="form-group">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <label className="form-label" style={{ margin: 0 }}>
+                  <span style={{ fontWeight: 700 }}>Task Prompt</span>
+                </label>
+                <span style={{ fontSize: '10.5px', fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)' }}>
+                  🔒 SOVEREIGN OFFLINE INFERENCE
+                </span>
               </div>
-            ) : (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  background: 'var(--bg-surface-sunken)',
-                  border: '1px solid var(--border-medium)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '10px 14px',
+
+              <textarea
+                className="textarea-field"
+                placeholder="Select a scenario below or enter an engineering prompt..."
+                value={prompt}
+                onChange={(e) => {
+                  setPrompt(e.target.value)
+                  setActiveScenarioId(null)
                 }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <FileText size={20} style={{ color: 'var(--ink-primary)' }} />
-                  <div>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink-primary)' }}>
-                      {selectedFile.name}
-                    </div>
-                    <div style={{ fontSize: '10.5px', fontFamily: 'var(--font-mono)', color: 'var(--ink-muted)' }}>
-                      {(selectedFile.size / 1024).toFixed(1)} KB
-                    </div>
-                  </div>
+                disabled={isSubmitting}
+                style={{ height: '95px', resize: 'vertical' }}
+              />
+
+              {/* Four Authoritative Scenario Cards */}
+              <div style={{ marginTop: '10px' }}>
+                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ink-secondary)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Zap size={13} style={{ color: 'var(--accent-amber)' }} />
+                  <span>Industrial Evaluation Scenarios</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedFile(null)}
-                  disabled={isSubmitting}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-muted)' }}
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            )}
 
-            {fileError && (
-              <div style={{ fontSize: '11.5px', color: 'var(--accent-coral)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <AlertCircle size={13} />
-                <span>{fileError}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Submit Action */}
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={isSubmitting || !prompt.trim()}
-            style={{ padding: '12px 20px', fontSize: '13px' }}
-          >
-            {isSubmitting ? (
-              <>
-                <Clock size={16} className="animate-spin" />
-                <span>Agent Pipeline Running...</span>
-              </>
-            ) : (
-              <>
-                <Play size={16} fill="currentColor" />
-                <span>Execute Agent Pipeline</span>
-              </>
-            )}
-          </button>
-        </form>
-
-        {/* Security / Air-gap Notice Box */}
-        <div className="halftone-card" style={{ padding: '14px', background: 'rgba(238, 232, 221, 0.4)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-            <Sparkles size={14} style={{ color: 'var(--accent-purple)' }} />
-            <span style={{ fontSize: '12px', fontWeight: 600, fontFamily: 'var(--font-sans)' }}>
-              Air-Gapped Sovereign Execution
-            </span>
-          </div>
-          <p style={{ fontSize: '11.5px', color: 'var(--ink-secondary)', lineHeight: 1.45 }}>
-            Zero data egress. Models run locally through Ollama, documents are indexed in persistent ChromaDB, and deliverables are generated directly on disk.
-          </p>
-        </div>
-      </div>
-
-      {/* RIGHT COLUMN: Live Execution Stream & Deliverable */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifySelf: 'stretch', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Terminal size={16} style={{ color: 'var(--ink-primary)' }} />
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase' }}>
-              Live Execution Feed
-            </span>
-          </div>
-
-          {/* Status Badge */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            {taskStatus === 'idle' && (
-              <span className="pipeline-tag" style={{ background: 'var(--bg-surface-sunken)' }}>
-                ● Standby
-              </span>
-            )}
-            {taskStatus === 'queued' && (
-              <span className="pipeline-tag" style={{ background: 'var(--accent-amber-subtle)', color: 'var(--accent-amber)' }}>
-                ● Queued
-              </span>
-            )}
-            {taskStatus === 'streaming' && (
-              <span className="pipeline-tag" style={{ background: 'var(--accent-purple-subtle)', color: 'var(--accent-purple)' }}>
-                <span className="pulse-dot" style={{ background: 'var(--accent-purple)', marginRight: '4px' }} />
-                Streaming Live
-              </span>
-            )}
-            {taskStatus === 'completed' && (
-              <span className="pipeline-tag" style={{ background: 'var(--accent-green-subtle)', color: 'var(--accent-green)' }}>
-                ✓ Completed
-              </span>
-            )}
-            {taskStatus === 'failed' && (
-              <span className="pipeline-tag" style={{ background: 'var(--accent-coral-subtle)', color: 'var(--accent-coral)' }}>
-                ✕ Error
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Streaming Console Terminal */}
-        <div className="stream-box">
-          {streamEvents.length === 0 && !streamedText && (
-            <div style={{ color: '#7a7266', fontSize: '12px', textAlign: 'center', padding: '40px 10px' }}>
-              <Terminal size={28} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
-              <div>Pipeline output will stream here via Server-Sent Events.</div>
-              <div style={{ fontSize: '11px', marginTop: '4px', opacity: 0.7 }}>
-                Submit a prompt to watch thoughts, tool invocations, and tokens live.
+                <div className="scenario-grid">
+                  {scenarios.map((sc) => {
+                    const isSel = activeScenarioId === sc.id
+                    return (
+                      <div
+                        key={sc.id}
+                        className={`scenario-card ${isSel ? 'active' : ''}`}
+                        onClick={() => handleSelectScenario(sc)}
+                      >
+                        <div className="scenario-card-header">
+                          <span className="scenario-badge" style={{ color: sc.badgeColor }}>
+                            {sc.badge}
+                          </span>
+                          {isSel && <Check size={13} style={{ color: 'var(--accent-coral)' }} />}
+                        </div>
+                        <div className="scenario-title">{sc.title}</div>
+                        <div className="scenario-desc">{sc.desc}</div>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             </div>
-          )}
 
-          {/* Event Items */}
-          {streamEvents.map((ev, i) => {
-            if (ev.event === 'thought') {
-              return (
-                <div key={i} className="stream-event-item stream-event-thought">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 600 }}>
-                    <Brain size={12} />
-                    <span>[AGENT THOUGHT] {ev.data?.task_type ? `→ ${ev.data.task_type}` : ''}</span>
+            {/* File Upload Dropzone */}
+            <div className="form-group">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <label className="form-label" style={{ margin: 0 }}>
+                  <span>Source Document / Dataset</span>
+                </label>
+                <span style={{ fontSize: '10px', color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)' }}>
+                  Auto-linked for presets • Max 10 MB
+                </span>
+              </div>
+
+              {!selectedFile ? (
+                <div
+                  className="dropzone"
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{ padding: '16px 14px' }}
+                >
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    style={{ display: 'none' }}
+                    onChange={(e) => handleFileChange(e.target.files[0])}
+                    accept=".pdf,.docx,.txt,.csv,.png,.jpg"
+                    disabled={isSubmitting}
+                  />
+                  <Upload size={20} style={{ color: 'var(--ink-muted)', margin: '0 auto 6px' }} />
+                  <div style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--ink-primary)' }}>
+                    Drag & Drop file or Click to Upload
                   </div>
-                  <div style={{ marginTop: '3px', whiteSpace: 'pre-wrap' }}>
-                    {ev.data?.msg || JSON.stringify(ev.data)}
+                  <div style={{ fontSize: '10.5px', color: 'var(--ink-muted)', marginTop: '2px', fontFamily: 'var(--font-mono)' }}>
+                    PDF, DOCX, TXT, CSV, PNG, JPG (Air-Gapped Local Storage)
                   </div>
                 </div>
-              )
-            }
+              ) : (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    background: 'var(--bg-surface-sunken)',
+                    border: '1px solid var(--border-medium)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '10px 14px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <FileText size={20} style={{ color: 'var(--accent-blue)' }} />
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink-primary)' }}>
+                        {selectedFile.name}
+                      </div>
+                      <div style={{ fontSize: '10.5px', fontFamily: 'var(--font-mono)', color: 'var(--ink-muted)' }}>
+                        {(selectedFile.size / 1024).toFixed(1)} KB • Attached
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedFile(null)}
+                    disabled={isSubmitting}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-muted)' }}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              )}
 
-            if (ev.event === 'tool_call') {
-              return (
-                <div key={i} className="stream-event-item stream-event-tool">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 600 }}>
-                    <Wrench size={12} />
-                    <span>TOOL INVOCATION: {ev.data?.tool}</span>
-                    {ev.data?.ok ? (
-                      <span style={{ color: '#4ade80', marginLeft: 'auto' }}>PASS</span>
-                    ) : (
-                      <span style={{ color: '#f87171', marginLeft: 'auto' }}>FAIL</span>
+              {fileError && (
+                <div style={{ fontSize: '11.5px', color: 'var(--accent-coral)', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '6px' }}>
+                  <AlertCircle size={13} />
+                  <span>{fileError}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Submit Action */}
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={isSubmitting || !prompt.trim()}
+              style={{ padding: '12px 20px', fontSize: '13px', gap: '8px' }}
+            >
+              {isSubmitting ? (
+                <>
+                  <Clock size={16} className="animate-spin" />
+                  <span>Running Agent Graph Workflow...</span>
+                </>
+              ) : (
+                <>
+                  <Play size={16} fill="currentColor" />
+                  <span>Execute Agent Pipeline</span>
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Air-gap Verification Status Box */}
+          <div className="halftone-card" style={{ padding: '12px 16px', background: 'var(--bg-surface-sunken)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <Sparkles size={14} style={{ color: 'var(--accent-green)' }} />
+              <span style={{ fontSize: '11.5px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--accent-green)' }}>
+                AIR-GAP PROTOCOL ACTIVE
+              </span>
+            </div>
+            <p style={{ fontSize: '11px', color: 'var(--ink-secondary)', lineHeight: 1.5 }}>
+              Zero cloud telemetry egress. Workflows execute locally via LangGraph SQLite checkpointer with persistent ChromaDB RAG.
+            </p>
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN: Live Execution Stream & Intelligence Brief */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {/* Dynamic Workflow Stage Tracker */}
+          <div className="pipeline-stage-tracker">
+            <div className={`pipeline-stage-step ${hasRouter ? (hasTool || hasDrafter ? 'completed' : 'active') : ''}`}>
+              <div className="pipeline-stage-dot" />
+              <span>1. ROUTER</span>
+            </div>
+            <span style={{ opacity: 0.3 }}>→</span>
+
+            <div className={`pipeline-stage-step ${hasTool ? 'completed' : hasRouter ? 'active' : ''}`}>
+              <div className="pipeline-stage-dot" />
+              <span>2. ANALYSIS</span>
+            </div>
+            <span style={{ opacity: 0.3 }}>→</span>
+
+            <div className={`pipeline-stage-step ${hasTool ? (hasDrafter ? 'completed' : 'active') : ''}`}>
+              <div className="pipeline-stage-dot" />
+              <span>3. TOOL EXEC</span>
+            </div>
+            <span style={{ opacity: 0.3 }}>→</span>
+
+            <div className={`pipeline-stage-step ${hasDrafter ? (hasDeliverable ? 'completed' : 'active') : ''}`}>
+              <div className="pipeline-stage-dot" />
+              <span>4. SYNTHESIS</span>
+            </div>
+            <span style={{ opacity: 0.3 }}>→</span>
+
+            <div className={`pipeline-stage-step ${hasDeliverable ? 'completed' : ''}`}>
+              <div className="pipeline-stage-dot" />
+              <span>5. DELIVERABLE</span>
+            </div>
+          </div>
+
+          {/* Live Execution Console */}
+          <div className="stream-box" style={{ minHeight: '140px', maxHeight: '180px' }}>
+            {streamEvents.length === 0 && !streamedText && (
+              <div style={{ color: 'var(--ink-muted)', fontSize: '12px', textAlign: 'center', padding: '30px 10px' }}>
+                <Terminal size={24} style={{ margin: '0 auto 8px', opacity: 0.4 }} />
+                <div>SSE pipeline events stream here live.</div>
+                <div style={{ fontSize: '10.5px', marginTop: '2px', opacity: 0.7 }}>
+                  Select an evaluation scenario to view thoughts and tool execution.
+                </div>
+              </div>
+            )}
+
+            {streamEvents.map((ev, i) => {
+              if (ev.event === 'thought') {
+                return (
+                  <div key={i} className="stream-event-item stream-event-thought">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 600 }}>
+                      <Brain size={12} />
+                      <span>[AGENT THOUGHT] {ev.data?.node ? `(${ev.data.node})` : ''}</span>
+                    </div>
+                    <div style={{ marginTop: '2px', whiteSpace: 'pre-wrap' }}>
+                      {ev.data?.message || JSON.stringify(ev.data)}
+                    </div>
+                  </div>
+                )
+              }
+
+              if (ev.event === 'tool_call') {
+                return (
+                  <div key={i} className="stream-event-item stream-event-tool">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 600 }}>
+                      <Wrench size={12} />
+                      <span>TOOL INVOCATION: {ev.data?.tool}</span>
+                      <span style={{ color: '#4ade80', marginLeft: 'auto' }}>DONE</span>
+                    </div>
+                    {ev.data?.preview && (
+                      <div style={{ fontSize: '10.5px', opacity: 0.85, marginTop: '2px', fontFamily: 'var(--font-mono)' }}>
+                        {ev.data.preview}
+                      </div>
                     )}
                   </div>
-                  {ev.data?.preview && (
-                    <div style={{ fontSize: '11px', opacity: 0.85, marginTop: '4px' }}>
-                      {ev.data.preview}
-                    </div>
-                  )}
+                )
+              }
+
+              return null
+            })}
+
+            {errorMessage && (
+              <div style={{ color: '#f87171', fontSize: '12px', padding: '8px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '4px' }}>
+                Error: {errorMessage}
+              </div>
+            )}
+
+            <div ref={streamEndRef} />
+          </div>
+
+          {/* DEDICATED ON-SCREEN INTELLIGENCE BRIEF (RICH MARKDOWN RENDERER) */}
+          {(cleanAnswer || taskStatus === 'streaming') && (
+            <div
+              className="halftone-card"
+              style={{
+                background: 'var(--bg-surface-elevated)',
+                border: '1.5px solid var(--border-strong)',
+                padding: '16px 20px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                animation: 'fadeIn 0.25s ease',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-medium)', paddingBottom: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--accent-coral)' }}>
+                  <Brain size={15} />
+                  <span>INTELLIGENCE BRIEF // SOVEREIGN SYNTHESIS</span>
                 </div>
-              )
-            }
 
-            return null
-          })}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={handleCopyAnswer}
+                    className="btn btn-outline"
+                    style={{ fontSize: '11px', padding: '4px 10px', gap: '5px' }}
+                  >
+                    {copied ? (
+                      <>
+                        <Check size={12} style={{ color: 'var(--accent-green)' }} />
+                        <span>Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={12} />
+                        <span>Copy Brief</span>
+                      </>
+                    )}
+                  </button>
 
-          {errorMessage && (
-            <div style={{ color: '#f87171', fontSize: '12px', padding: '8px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '4px' }}>
-              Error: {errorMessage}
+                  <button
+                    type="button"
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="btn btn-outline"
+                    title={isExpanded ? 'Collapse' : 'Expand View'}
+                    style={{ fontSize: '11px', padding: '4px 8px' }}
+                  >
+                    {isExpanded ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+                  </button>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  maxHeight: isExpanded ? '600px' : '300px',
+                  overflowY: 'auto',
+                  paddingRight: '6px',
+                  transition: 'max-height 0.25s ease',
+                }}
+              >
+                {cleanAnswer ? (
+                  <MarkdownRenderer content={cleanAnswer} />
+                ) : (
+                  <div style={{ fontSize: '12.5px', color: 'var(--ink-muted)', fontStyle: 'italic' }}>
+                    Agent synthesizing findings from local knowledge base...
+                  </div>
+                )}
+
+                {taskStatus === 'streaming' && (
+                  <span
+                    className="retro-block-cursor"
+                    style={{ width: '7px', height: '1em', verticalAlign: '-0.1em', marginLeft: '4px' }}
+                  />
+                )}
+              </div>
             </div>
           )}
 
-          <div ref={streamEndRef} />
+          {/* DELIVERABLE WORKBENCH PREVIEWER (SPREADSHEET & MEMO) */}
+          {deliverable && (
+            <DeliverablePreviewer deliverable={deliverable} />
+          )}
         </div>
-
-        {/* DEDICATED ON-SCREEN INTELLIGENCE ANSWER BOX */}
-        {streamedText && (() => {
-          // Filter out raw JSON tool-call fragments — only show the final prose answer
-          const cleanAnswer = streamedText
-            .split('\n')
-            .filter(line => {
-              const trimmed = line.trim()
-              // Skip lines that are raw JSON tool calls or action objects
-              if (trimmed.startsWith('{"action"')) return false
-              if (trimmed.startsWith('[tool call]')) return false
-              if (trimmed.startsWith('{"tool"')) return false
-              return true
-            })
-            .join('\n')
-            .trim()
-
-          if (!cleanAnswer && taskStatus !== 'streaming') return null
-
-          return (
-          <div
-            className="halftone-card"
-            style={{
-              background: 'var(--bg-surface-elevated)',
-              border: '1.5px solid var(--border-strong)',
-              padding: '16px 20px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '10px',
-              animation: 'fadeIn 0.25s ease',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-medium)', paddingBottom: '8px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--accent-coral)' }}>
-                <Brain size={14} />
-                <span>AGENT INTELLIGENCE BRIEF // RESPONSE</span>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleCopyAnswer}
-                className="btn btn-outline"
-                style={{ fontSize: '10.5px', padding: '3px 8px', gap: '4px' }}
-              >
-                <CheckCircle2 size={12} />
-                <span>{copied ? 'Copied!' : 'Copy Answer'}</span>
-              </button>
-            </div>
-
-            <div
-              style={{
-                fontSize: '13px',
-                lineHeight: '1.65',
-                color: 'var(--ink-primary)',
-                fontFamily: 'var(--font-mono)',
-                whiteSpace: 'pre-wrap',
-                maxHeight: '260px',
-                overflowY: 'auto',
-              }}
-            >
-              {cleanAnswer || 'Processing...'}
-              {taskStatus === 'streaming' && (
-                <span
-                  className="retro-block-cursor"
-                  style={{ width: '7px', height: '1em', verticalAlign: '-0.1em', marginLeft: '3px' }}
-                />
-              )}
-            </div>
-          </div>
-          )
-        })()}
-
-        {/* DELIVERABLE SHOWCASE CARD */}
-        {deliverable && (
-          <div
-            className="halftone-card"
-            style={{
-              background: 'var(--accent-green-subtle)',
-              borderColor: 'var(--accent-green)',
-              padding: '14px 18px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '16px',
-              animation: 'fadeIn 0.25s ease',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              {deliverable.file_id?.endsWith('.xlsx') ? (
-                <FileSpreadsheet size={28} style={{ color: 'var(--accent-green)' }} />
-              ) : (
-                <FileText size={28} style={{ color: 'var(--accent-green)' }} />
-              )}
-              <div>
-                <div style={{ fontSize: '10.5px', fontFamily: 'var(--font-mono)', color: 'var(--accent-green)', fontWeight: 600 }}>
-                  EXPORTED DELIVERABLE DOCUMENT
-                </div>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--ink-primary)' }}>
-                  {deliverable.file_id}
-                </div>
-              </div>
-            </div>
-
-            <a
-              href={getDownloadUrl(deliverable.file_id)}
-              download
-              className="btn btn-primary"
-              style={{ background: 'var(--accent-green)', borderColor: 'var(--accent-green)', padding: '7px 14px', fontSize: '12px' }}
-            >
-              <Download size={14} />
-              <span>Download {deliverable.file_id?.endsWith('.xlsx') ? '.xlsx' : '.docx'}</span>
-            </a>
-          </div>
-        )}
       </div>
     </div>
-  </div>
   )
 }
